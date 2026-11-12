@@ -1,0 +1,8 @@
+# pnpm 12 ignores .npmrc for these settings, so they live here.
+# engineStrict: installing under a different Node major fails (FND-FR-02).
+# saveExact: dependencies are pinned to exact versions (FND-NFR-06).
+engineStrict: true
+minimumReleaseAgeExclude:
+  - "@hookform/resolvers@7.0.6"
+  - prettier@3.10.1
+saveExact: true
