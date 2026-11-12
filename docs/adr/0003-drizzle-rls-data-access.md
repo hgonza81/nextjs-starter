@@ -87,7 +87,7 @@ Reviewed against the code and the running stack (Supabase CLI 3.1.0, Postgres 17
 
 **Residual risks**
 - Default privileges are revoked only for the owner `postgres`. `postgres` cannot change `supabase_admin`'s defaults (42501), and a table created in `public` as `supabase_admin` is still auto-granted to `anon`/`authenticated` (reproduced). Acceptable because migrations, Studio SQL and the CLI run as `postgres`. Mitigations: never create objects as `supabase_admin`; the schema guard already fails such a table unless it has RLS and a policy; add a catalog test that `anon` holds no privilege on any `public` table or sequence (open issue 3).
-- Default privileges on **functions** were not revoked: a function created by `postgres` in `public` is executable by `anon`, `authenticated` and PUBLIC (reproduced). Epic 002's `SECURITY DEFINER` membership helpers need an explicit `revoke execute ... from public, anon` and `grant execute ... to authenticated`, or a default-privilege revoke for functions (open issue 2).
+- Default privileges on **functions**: revoked by migration `20261112130000_app_backend_timeouts_function_privileges.sql` (FND-T-50) for functions created by `postgres`: the PUBLIC default is removed with a non-schema-scoped `alter default privileges`, and `anon`/`authenticated` in `public`; only the owner and `service_role` keep EXECUTE. Epic 002's `SECURITY DEFINER` membership helpers need an explicit `grant execute ... to authenticated`. The `supabase_admin` residual case is the same as for tables.
 - `statement_timeout` is not applied: role-level settings of `authenticated` (8s) and `anon` (3s) apply at login, not on `SET ROLE`, and `app_backend` has none, so queries are unbounded (verified: `show statement_timeout` = 0 inside `withRls`). Open issue 1.
 - `/api/health/db` is an unauthenticated route that opens a database transaction per request; `postgres` defaults give a 30 s connect timeout. Acceptable for an MVP; no cloud database exists yet.
 
@@ -96,8 +96,8 @@ Reviewed against the code and the running stack (Supabase CLI 3.1.0, Postgres 17
 **Re-verify when a cloud project exists:** see the list in the FND-T-18 review (pooler username `app_backend.<ref>` and password set manually, SSL in the URL, `GRANT ... WITH INHERIT FALSE, SET TRUE` and `CREATE ROLE` allowed for the cloud `postgres`, Data API toggle, Postgres 17, default privileges and function grants as in local, pool saturation with `max: 1` per instance, timeouts, rerun `test:db` through port 6543).
 
 ## Open issues
-1. No statement or idle-in-transaction timeout for `app_backend`. Options: `alter role app_backend set statement_timeout = '8s'` (and `idle_in_transaction_session_timeout`) in a new migration, asserted by a catalog test on `pg_roles.rolconfig`; or `set_config('statement_timeout', '8s', true)` inside `withRls` (pooler-safe, costs a statement). Recommended: the role-level migration. Decision: PO or architect, task before epic 002.
-2. Function default privileges (see Residual risks). Recommended: decide in the first epic 002 migration; revoke by default for `anon` and PUBLIC.
+1. ~~No statement or idle-in-transaction timeout for `app_backend`.~~ Resolved in FND-T-50: `alter role app_backend set statement_timeout = '8s'` and `idle_in_transaction_session_timeout = '10s'` (catalog `pg_roles.rolconfig`), verified inside `withRls` directly and through the local Supavisor transaction pooler (`pg_sleep(10)` cancelled with 57014). The catalog test belongs to FND-T-51.
+2. ~~Function default privileges.~~ Resolved in FND-T-50 (see Residual risks).
 3. No test asserts that `anon` has no table/sequence privileges in `public`. Recommended small tester task.
 
 ## References
