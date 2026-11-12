@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Environment files (only the template is tracked)
+.env*
+!.env.example
+
+# Vercel
+.vercel/
+
+# Test output
+test-results/
+playwright-report/
+coverage/
+
+# Supabase local temp
+supabase/.temp/
+supabase/.branches/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
