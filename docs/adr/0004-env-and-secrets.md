@@ -17,7 +17,7 @@ DB variables in production: (a) required everywhere (breaks the deploy, no cloud
 ## Decision
 Option 1, with (c).
 
-- `src/lib/env.ts` is the only module reading `process.env`. Zod schemas: server schema and public schema. Server variables are imported only from server code (`server-only`); the public object is the only one that may reach client bundles.
+- Two modules read `process.env`, split by exposure (amended in FND-T-18, see Amendment): `src/lib/env.ts` (public schema, exports `publicEnv`, safe for client code) and `src/lib/env.server.ts` (starts with `import "server-only"`, server schema, exports `serverEnv` and `requireDatabaseUrl()`). Only `publicEnv` may reach client bundles; importing `env.server.ts` from client code is a build error.
 - `NEXT_PUBLIC_` is allowed only for values safe to expose: Supabase URL and anon/publishable key, public app URL. Never for service-role key, database URLs or passwords. A lint or test check asserts no `NEXT_PUBLIC_` name matches `SERVICE|SECRET|PASSWORD|DATABASE`.
 - Server variables: `DATABASE_URL` (role `app_backend`, ADR 0003) and, for tooling only, `DATABASE_MIGRATION_URL`. In production they are optional until a cloud DB exists; the module providing DB access fails fast at runtime when they are needed and missing. In development and test they are required. Tighten when the cloud DB arrives (document in `.env.example` and README).
 - `SUPABASE_SERVICE_ROLE_KEY` is not defined in 001 (no consumer). If added later, it is server-only, read in one file.
@@ -27,6 +27,14 @@ Option 1, with (c).
 - Secret scanning runs on pushed commits (gitleaks binary run directly, full history fetch). With no hooks, a detected secret is already in history: it must be rotated, not just removed. The README states this.
 - Supabase Auth client factories (browser, server, middleware via `@supabase/ssr`) live only in `src/lib/supabase/`; they are Auth-only (ADR 0003). Auth-aware logic arrives in epic 002.
 - Logging never includes secrets, tokens, passwords or PII.
+
+## Amendment (FND-T-18, 2026-11-12): implemented shape
+- **Split.** One file with both schemas (original text) was replaced by `env.ts` + `env.server.ts` so the server-only guarantee is enforced by `server-only`, not by discipline. `env.server.ts` reuses `formatEnvError` from `env.ts`; messages name the variable and never print values.
+- **Startup validation.** `src/instrumentation.ts` `register()` reads `process.env.NEXT_RUNTIME` and, when it is `nodejs`, imports both env modules, so a bad environment fails at `next dev`/`next start` with a message naming the variable. `NEXT_RUNTIME` is the one extra `process.env` read outside the env modules (the edge runtime must not load `server-only`).
+- **Build and runtime.** `next.config.ts` imports `./src/lib/env` (relative path; only the public module, because `server-only` throws outside the Next.js server). So `next build` fails on a missing or invalid `NEXT_PUBLIC_*` variable (they are inlined at build), and, as a side effect, `next start` and `next dev` also need the three `NEXT_PUBLIC_*` variables at runtime. CI and Vercel must set them for both build and runtime.
+- **Database variables.** `NODE_ENV` plus `DATABASE_URL` and `DATABASE_MIGRATION_URL` are validated; the two URLs are required unless `NODE_ENV` is `production`, and an empty string counts as unset. The lazy `getDb()` calls `requireDatabaseUrl()`, so a missing `DATABASE_URL` fails on first use (ADR 0003). Tooling (`drizzle.config.ts`, `scripts/db-schema.ts`, Playwright and Vitest config, `tests/utils/local-env.mts`) reads `process.env` outside the app and is not subject to this rule.
+- **Test.** A unit test asserts no `NEXT_PUBLIC_` name matches `SERVICE|SECRET|PASSWORD|DATABASE`. The assertion that no server-only variable appears in the client bundle needs a build artifact and belongs to FND-T-37.
+- **Lint (T-37)** must allow `env.server.ts` (server code only) and the `NEXT_RUNTIME` read in `src/instrumentation.ts`.
 
 ## Consequences
 - Positive: single validated entry point; clear public/secret split; deploy works without a database.

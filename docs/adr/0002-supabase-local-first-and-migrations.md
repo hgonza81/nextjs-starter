@@ -16,10 +16,10 @@ The PO decided: no cloud Supabase project yet; local development and CI use the 
 ## Decision
 **Option 1, SQL-first.** This resolves the developer-vs-architect proposals in favor of the developer's own stated fallback: the first option's main risk (generated policy SQL quality at ~50 tables, mixed authoring) is the one we avoid by never letting drizzle-kit write migrations. The Drizzle schema is a typed mirror, not an authority.
 
-- Local and CI: Supabase CLI + Docker. `supabase start`, then `supabase db reset` applies all migrations and `seed.sql` (single command). The Postgres major version in `supabase/config.toml` must match the future cloud project (CLI default is 15; verify when the cloud project exists).
+- Local and CI: Supabase CLI + Docker. `supabase start`, then `supabase db reset` applies all migrations and `seed.sql` (single command). The CLI is the exact devDependency `supabase@3.1.0` (no global install; scripts `db:start`, `db:stop`, `db:reset`, `db:status`). Local Postgres is major 17 (`[db] major_version = 17` in `supabase/config.toml`; the CLI default is 15); the cloud project must be created on 17 too (re-verify then).
 - Every migration that creates a table also enables RLS, adds policies, and grants privileges explicitly, in the same file. Small, forward-only, reviewed.
-- `drizzle-kit pull` (connection as the migration role, `schemaFilter: ['public']`) writes `src/db/schema/` (generated, committed, header "generated, do not edit"). Hand-written relations/helpers live in separate files. `drizzle-kit generate`, `migrate` and `push` are never used (documented; the `drizzle.config.ts` must not point `out` at `supabase/migrations`).
-- CI drift check in the DB job: `supabase db reset`, then `drizzle-kit pull`, then `git diff --exit-code src/db/schema`. Primary safety net against pull instability.
+- `drizzle-kit pull` (connection as the migration role, `schemaFilter: ['public']`) writes `src/db/schema/` (generated, committed, header "generated, do not edit"). It is run only through `pnpm db:schema` (`scripts/db-schema.ts`, see Amendment). Hand-written relations/helpers live in separate files; `src/db/schema/index.ts` is hand-written. `drizzle-kit generate`, `migrate` and `push` are never used (documented; the `drizzle.config.ts` must not point `out` at `supabase/migrations`).
+- CI drift check in the DB job: `supabase db reset`, then `pnpm db:schema`, then `git diff --exit-code src/db`. Primary safety net against pull instability. It needs `DATABASE_MIGRATION_URL` set in CI.
 - Types: Drizzle inferred types are the model types. `supabase gen types` is not used unless `supabase-js` is ever used for data (it is not; ADR 0003).
 - Docker scope: only what the Supabase CLI needs. The app is not containerized in development. A production Dockerfile is not needed (Vercel).
 - CI starts the local stack with unneeded services excluded where the pinned CLI supports it, and keeps the DB/E2E job separate from the fast job.
@@ -28,11 +28,21 @@ The PO decided: no cloud Supabase project yet; local development and CI use the 
 ## Consequences
 - Positive: one migration owner; the test database equals production schema; SQL features of epic 002 need no workaround; Supabase CLI flow stays standard.
 - Negative: schema is written in SQL, TS mirror regenerated after each migration (one command, enforced by drift check). Developers need SQL fluency.
-- Risk: `drizzle-kit pull` output must be stable and handle policies/roles acceptably. Not verified (see References). The drift check fails loudly if output is unstable; fallback is to hand-write the schema files and keep a test that compares them to `information_schema`.
+- Risk: `drizzle-kit pull` output must be stable and handle policies/roles acceptably. Verified on 0.31.11 (see Amendment): stable through the wrapper; it does not carry RLS-enabled or grants, so the TS schema must never be used as a security statement. The hand-written-schema fallback was not needed.
 - Revisit if pull proves unreliable at scale, or if the team prefers TS-authored schema once Drizzle's migration story for RLS/functions matures (supersede with a new ADR).
 
+## Amendment (FND-T-18, 2026-11-12): verified `drizzle-kit pull` behavior
+Verified on `drizzle-kit` 0.31.11 against the real local Postgres 17 (a table with RLS and a policy, a table with RLS and no policy, explicit grants):
+- It **emits policies** (`pgPolicy(...)` with `for`, `to`, `using`, `withCheck`) and tables, columns, keys, indexes.
+- It does **not** emit the RLS-enabled flag: a table with RLS and no policy has no `.enableRLS()` in the TS output.
+- It does **not** emit grants, and emits **roles** only with `entities: { roles: true }`, which adds noisy system roles; left off.
+- Consequence: the TS mirror says nothing about security. The schema guard (FND-FR-22) and every grant/RLS check query the catalog (`pg_class.relrowsecurity`, `pg_policies`, privilege functions), never `src/db/schema`.
+- `pull` also writes a random `0000_*.sql` introspection file and a `meta/` folder, and its output has no header. `scripts/db-schema.ts` (run by `pnpm db:schema`) deletes the old generated files, runs `drizzle-kit pull`, removes the junk `*.sql` and `meta/`, and prepends the "GENERATED, do not edit" header to `schema.ts` and `relations.ts`. A second run produces an empty `git diff`; confirmed again after `db:reset` in this review. The generated files are ignored by Prettier and ESLint.
+- The drift check compares tracked files only: a brand-new generated file would not appear in `git diff`. The wrapper always writes the same two file names, so this holds; if that changes, also check `git status --porcelain -- src/db`.
+- Seed: `supabase/seed.sql` sets the local-only `app_backend` password and runs on `db reset`. Never apply it to a cloud project (`supabase db push --include-seed` and `db reset --linked` are forbidden against cloud).
+
 ## References
-- Drizzle `drizzle-kit pull`: https://orm.drizzle.team/docs/drizzle-kit-pull (checked 2026-11-12: confirms introspection to `schema.ts`, `schemaFilter`, `--init`; the page does not state output stability or policy/role introspection, which I could not verify).
-- Drizzle RLS: https://orm.drizzle.team/docs/rls (checked: `entities.roles` off by default, `provider: 'supabase'` and `pgRole(...).existing()` exist; whether `pull` emits policies is not stated).
+- Drizzle `drizzle-kit pull`: https://orm.drizzle.team/docs/drizzle-kit-pull (checked 2026-11-12: confirms introspection to `schema.ts`, `schemaFilter`, `--init`; the page does not state output stability or policy/role introspection, which FND-T-10 and FND-T-18 verified empirically, see Amendment).
+- Drizzle RLS: https://orm.drizzle.team/docs/rls (checked: `entities.roles` off by default, `provider: 'supabase'` and `pgRole(...).existing()` exist; whether `pull` emits policies is not stated; verified empirically: it does).
 - Supabase local config: https://supabase.com/docs/guides/local-development/cli/config (`[db] major_version`, default 15; `[api]` options).
 - specs/001-foundations/reviews/architect.md and developer.md (round 2), questions.md round 2 confirmations.
