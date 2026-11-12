@@ -1,3 +1,7 @@
+# esbuild (via drizzle-kit) ships its binary as an optional dependency; its
+# install script is not needed.
+allowBuilds:
+  esbuild: false
 # pnpm 12 ignores .npmrc for these settings, so they live here.
 # engineStrict: installing under a different Node major fails (FND-FR-02).
 # saveExact: dependencies are pinned to exact versions (FND-NFR-06).

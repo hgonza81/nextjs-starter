@@ -5,3 +5,5 @@ next-env.d.ts
 specs
 docs
 .claude
+src/db/schema/schema.ts
+src/db/schema/relations.ts
