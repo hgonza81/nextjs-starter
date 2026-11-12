@@ -17,6 +17,8 @@ next-env.d.ts
 # Test output
 test-results/
 playwright-report/
+blob-report/
+playwright/.cache/
 coverage/
 
 # Supabase local temp

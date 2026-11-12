@@ -3,11 +3,11 @@
 Three layers, each with its own command. Write every test at the cheapest layer
 that gives real confidence.
 
-| Layer    | Command         | Where                          | Needs Docker/Supabase                              |
-| -------- | --------------- | ------------------------------ | -------------------------------------------------- |
-| Unit     | `pnpm test`     | `src/**/*.test.ts` (colocated) | No                                                 |
-| DB / RLS | `pnpm test:db`  | `tests/db/*.test.ts`           | Yes (local Supabase)                               |
-| E2E      | `pnpm test:e2e` | `tests/e2e/`                   | Not available yet (Playwright arrives in FND-T-17) |
+| Layer    | Command         | Where                          | Needs Docker/Supabase                      |
+| -------- | --------------- | ------------------------------ | ------------------------------------------ |
+| Unit     | `pnpm test`     | `src/**/*.test.ts` (colocated) | No                                         |
+| DB / RLS | `pnpm test:db`  | `tests/db/*.test.ts`           | Yes (local Supabase)                       |
+| E2E      | `pnpm test:e2e` | `tests/e2e/*.spec.ts`          | No (no database; DB variables are removed) |
 
 Coverage (report only, no threshold): `pnpm test:coverage`.
 
@@ -15,6 +15,10 @@ Coverage (report only, no threshold): `pnpm test:coverage`.
 
 - Node 26 and pnpm from `package.json` (`node -v` must be 26.x), `pnpm install`.
 - Docker running (DB tests only).
+- Chromium for E2E, once per machine: `pnpm exec playwright install chromium`
+  (CI later: `pnpm exec playwright install --with-deps chromium`). Browsers are
+  stored in the user cache (`~/Library/Caches/ms-playwright` on macOS), outside
+  the repository, so they are never committed.
 - Local Supabase started and migrated: `pnpm db:start`, then `pnpm db:reset`
   once (it applies the migrations and `supabase/seed.sql`, which creates the
   `app_backend` role and its local password).
@@ -167,6 +171,48 @@ Lessons recorded while writing these: a first version of the insert case used
 Tests rely on `fileParallelism: false`: the guard on the real schema would see
 another file's throwaway tables if files ran in parallel.
 
+## E2E (FND-T-17)
+
+Files: `playwright.config.ts` (root), `tests/e2e/home.spec.ts` (heading, HTTP 200,
+no console errors, axe with the WCAG 2.2 AA tags in light and dark, no horizontal
+scroll at 375 and 1280 px) and `tests/e2e/health.spec.ts` (`GET /api/health` is
+200 with `{"status":"ok"}`). Chromium only for now.
+
+Production-like start: `pnpm test:e2e` makes Playwright run
+`pnpm build && next start --port 3100` (port 3100 so a `pnpm dev` on 3000 does
+not collide; override with `E2E_PORT`). The three `NEXT_PUBLIC_*` variables are
+set by the config with the `.env.example` values, and `DATABASE_URL` /
+`DATABASE_MIGRATION_URL` are removed from the server environment, because the
+deployed app has no database. A server already on the port is never reused, so
+a stale build cannot be tested. No `.env.local` is needed.
+
+Against an already deployed URL (used by the post-deploy hello-world check,
+FND-T-24): set `E2E_BASE_URL`; the config then starts no server and builds
+nothing:
+
+```bash
+E2E_BASE_URL=https://my-app.example.com pnpm exec playwright test tests/e2e/health.spec.ts
+```
+
+Run only `health.spec.ts` that way: `home.spec.ts` is also valid remotely but is
+not the hello-world check. Verified locally against a separately started
+`next start`.
+
+Scope rule: axe runs on every key page in E2E. `/design` checks arrive with
+FND-T-33; add each new page to the axe tests when the page exists.
+
+Mutation record (each applied temporarily, E2E run, restored with
+`git checkout`; never committed):
+
+| Mutation                                          | Result                                                |
+| ------------------------------------------------- | ----------------------------------------------------- |
+| `<h1>` changed to `<h2>` on the home page         | heading test red (axe stays green: expected)          |
+| `<img>` without `alt` added                       | both axe tests red (also the console test, image 404) |
+| low-contrast paragraph (`#ccc` on `#fff`) added   | both axe tests red (`color-contrast`)                 |
+| 2000 px wide element added                        | both horizontal-scroll tests red                      |
+| `/api/health` body changed to `{"status":"down"}` | health test red                                       |
+| `console.error` script added to the home page     | console test red                                      |
+
 ## When the stack is down
 
 `pnpm test:db` fails immediately, before any test, with a message naming the
@@ -183,4 +229,9 @@ side effect of the aborted start; the exit code is non-zero.
   `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
 - A failing "deny" case that unexpectedly passes usually means a missing or
   too broad `grant` or policy in the test setup.
-- Playwright trace viewer and headed mode are documented when E2E exists.
+- E2E: `pnpm exec playwright test --headed`, `--ui` for the UI mode, one file:
+  `pnpm test:e2e tests/e2e/health.spec.ts`. The HTML report is written to
+  `playwright-report/` (`pnpm exec playwright show-report`). Traces are recorded
+  on the first retry only (CI retries twice, local runs do not retry); to force
+  one locally use `pnpm test:e2e --trace on`, then open it with
+  `pnpm exec playwright show-trace test-results/<test>/trace.zip`.
