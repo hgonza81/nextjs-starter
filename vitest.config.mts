@@ -2,6 +2,8 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitest/config";
 
+import { resolveLocalTestEnv } from "./tests/utils/local-env.mts";
+
 const fromRoot = (path: string) =>
   fileURLToPath(new URL(path, import.meta.url));
 
@@ -39,6 +41,9 @@ export default defineConfig({
           name: "db",
           include: ["tests/db/**/*.test.ts"],
           environment: "node",
+          // Local Supabase defaults (non-secret); real env vars win.
+          env: resolveLocalTestEnv(),
+          globalSetup: ["tests/utils/db-global-setup.ts"],
           // One connection per worker is shared state: run files in sequence.
           fileParallelism: false,
         },
