@@ -66,7 +66,8 @@ Files: `tests/db/with-rls-context.test.ts` (pool size 1, the production
 `getDb()`) and `tests/db/with-rls-parallel.test.ts` (item 3). They cover ADR 0003
 required tests 1, 2, 3, 5 and 7, the anonymous variant, and the fail-closed
 check that a query through the app connection without `withRls` is denied. Tests
-4, 6, 8 (as a catalog test), 9 and 10 belong to FND-T-16.
+4, 6, 8 (catalog), 9 and the schema guard are in the T-16 section below; test 10
+(lint fixture) belongs to FND-T-38.
 
 Parallel test: the production client has `max: 1`, so calls would only queue.
 The parallel file replaces the module `@/db/client` (and nothing else) with a
@@ -95,6 +96,76 @@ committed). Result: every mutation turned the suite red.
 | swallow the callback error inside the transaction            | (7) rollback, error propagation, database error; (2) after rollback; (3) failing concurrent call                    |
 | drop the empty tenant id check                               | (5) empty and whitespace tenant id                                                                                  |
 | anon variant switches to `authenticated`                     | anonymous variant (role anon, `auth.role()`)                                                                        |
+
+## Isolation, role model and schema guard (FND-T-16)
+
+Files (all real Postgres, through the production `withRls`):
+
+- `tests/db/tenant-isolation.test.ts`: ADR test 4. Throwaway `memberships`,
+  `items` (membership policy) and `scoped` (membership AND the
+  `app.current_tenant` selector) tables. Actor x action x tenant matrix (user A,
+  user B, a member of both, a valid user without membership, anonymous with and
+  without a grant) plus explicit attack tests checked from the privileged
+  connection: no side effects on tenant B, tampered tenant id on INSERT and
+  UPDATE rejected by `WITH CHECK`, `ON CONFLICT DO UPDATE` hijack, forged
+  tenant/role claims, malformed selector, membership removal takes effect on the
+  next call.
+- `tests/db/app-backend-role.test.ts`: ADR test 6 and FND-FR-08 from the
+  catalog (`pg_roles`, `pg_auth_members`, `pg_shdepend`, `has_*_privilege`), plus
+  runtime refusal of `SET ROLE` to every role other than `authenticated`/`anon`
+  and of `SET SESSION AUTHORIZATION`, also from inside `withRls`.
+- `tests/db/schema-guard.test.ts`: FND-FR-22 (ADR test 9) and ADR test 9 of
+  FND-FR-10 (policy-less table returns zero rows). The guard is
+  `tests/utils/schema-guard.ts` and reads the catalog; its own tests prove it
+  reports a table without RLS, with RLS but no policy, with a policy but RLS off,
+  and a partitioned table, and honors the allowlist (`SCHEMA_GUARD_ALLOWLIST`,
+  empty). Every real table added in epic 002 is checked automatically.
+
+Not covered here, on purpose: the lint fixture (ADR test 10, FND-T-38); the Data
+API being off (an HTTP check of the local stack, not a database property; the
+`[api] enabled = false` setting was verified manually in FND-T-06/T-08);
+views, functions and `SECURITY DEFINER` helpers in `public` are not checked by
+the guard (it covers tables only, as FND-FR-22 states).
+
+Mutation record. Each row was applied temporarily (SQL against the local
+database, or an edit of the test file or the guard, always restored) and the
+named suite was run. "Equivalent" means the mutation does not change the
+behavior, so the test correctly stays green.
+
+| Mutation (thing under test weakened)                                  | Result                                                                         |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| RLS disabled on the `items` table                                     | 34 red (matrix, anon, attack tests)                                            |
+| `WITH CHECK (true)` on `items`                                        | 6 red (insert in matrix, tampered INSERT, insert for tenant B)                 |
+| `USING (true)` on `items`                                             | 15 red (cross-tenant select/update/delete, forged context, membership removal) |
+| policy `TO public` with the membership check kept                     | green: equivalent (anon has no `auth.uid()`, the check still denies)           |
+| policy `TO public USING (true)`                                       | 19 red (anon granted, forged context)                                          |
+| `memberships` read policy `USING (true)`                              | 1 red (other tenant's memberships visible)                                     |
+| `INSERT` privilege and permissive policy on `memberships`             | 1 red (self-granted membership)                                                |
+| `scoped` policy without the membership check                          | 4 red (outsider and non-member selector)                                       |
+| `scoped` policy without the selector                                  | 9 red                                                                          |
+| `scoped` `WITH CHECK` without the selector (first run: survived)      | 4 red after the fix below                                                      |
+| `app_backend` BYPASSRLS / SUPERUSER / INHERIT / CREATEROLE+CREATEDB   | 1 / 13 / 1 / 1 red                                                             |
+| `authenticated` BYPASSRLS                                             | 1 red                                                                          |
+| `service_role` granted to `app_backend` with SET                      | 4 red (membership list, SET ROLE tests)                                        |
+| `anon` granted with INHERIT / `ADMIN OPTION` on `authenticated`       | 2 / 1 red                                                                      |
+| `anon` membership dropped                                             | 1 red                                                                          |
+| `authenticated` made a member of `service_role` (transitive path)     | 6 red                                                                          |
+| `app_backend` owns a table / owns a schema                            | 4 / 2 red                                                                      |
+| `SELECT` on a table granted to PUBLIC / column grant to `app_backend` | 2 red each                                                                     |
+| `SELECT` on `auth.users` granted to `app_backend`                     | 1 red                                                                          |
+| `CREATE` on schema `public` granted to `app_backend`                  | 1 red                                                                          |
+| default privileges for new tables / sequences restored for anon+auth. | 1 red each                                                                     |
+| real `public` table without RLS / RLS but no policy / policy, RLS off | guard test red (3 red each, incl. a partitioned table)                         |
+| guard ignores the RLS flag / ignores the policy count / ignores `p`   | 1 red each (the matching self-test)                                            |
+| guard ignores the allowlist / queries another schema                  | 1 / 7 red                                                                      |
+| policy-less table gets RLS off / a permissive policy                  | 4 red each (zero-rows tests)                                                   |
+
+Lessons recorded while writing these: a first version of the insert case used
+`RETURNING`, which also runs the SELECT policy on the new row and masked a weak
+`WITH CHECK` (the mutation survived); the matrix now counts rows without
+`RETURNING`. Allow cases seed their own row, so no case depends on another.
+Tests rely on `fileParallelism: false`: the guard on the real schema would see
+another file's throwaway tables if files ran in parallel.
 
 ## When the stack is down
 
