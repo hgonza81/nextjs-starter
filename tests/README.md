@@ -60,6 +60,42 @@ working example):
 Rules: assert observable outcomes (what a role sees, what is in the database),
 one concept per test, test names start with the requirement ID, no `sleep`.
 
+## `withRls` context tests and mutation record (FND-T-15)
+
+Files: `tests/db/with-rls-context.test.ts` (pool size 1, the production
+`getDb()`) and `tests/db/with-rls-parallel.test.ts` (item 3). They cover ADR 0003
+required tests 1, 2, 3, 5 and 7, the anonymous variant, and the fail-closed
+check that a query through the app connection without `withRls` is denied. Tests
+4, 6, 8 (as a catalog test), 9 and 10 belong to FND-T-16.
+
+Parallel test: the production client has `max: 1`, so calls would only queue.
+The parallel file replaces the module `@/db/client` (and nothing else) with a
+client of the same shape but a pool of 8; `withRls` itself is the unmodified
+production code. The test asserts that several backend PIDs were used, so it
+proves real concurrency. Limit: the pool size is a test choice, and the
+production pool of 1 is covered by the other file.
+
+Each assertion was checked by temporarily mutating `src/db/rls.ts` (restored
+with `git checkout src/db/rls.ts` after every run; mutations are never
+committed). Result: every mutation turned the suite red.
+
+| Mutation of `src/db/rls.ts`                                  | Tests that failed (main ones)                                                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| claims `set_config(..., false)` (not transaction-local)      | (2) after commit, after rollback, after anonymous call; (7) after a database error                                  |
+| `request.jwt.claim.sub` `set_config(..., false)`             | (2) after commit/rollback; anonymous variant (inherits previous sub)                                                |
+| `app.current_tenant` `set_config(..., false)`                | (1) tenant only when supplied; (2) after commit/rollback/next user; (7) next user; anonymous variant                |
+| remove `set local role` (never switch role)                  | (1) role, `auth.uid()`, claims; (2); (3) all parallel tests; (7) rollback tests; fail-closed read through `withRls` |
+| `set role` (session-level) instead of `set local role`       | (2) after commit/rollback/anonymous; (5) connection default after refusal; (7); fail-closed without `withRls`       |
+| caller claims override verified `sub`/`role`                 | (1) forged `sub` and `role` overwritten; `auth.jwt()`/`auth.role()`                                                 |
+| `role` claim not overwritten                                 | (1) forged role, claims unchanged, `auth.role()`; (2) next user                                                     |
+| `request.jwt.claim.sub` never set                            | (1) `auth.uid()`; (2); (3) parallel; (7)                                                                            |
+| skip user id validation entirely                             | (5) all ten invalid ids                                                                                             |
+| reject only the empty string (no UUID check)                 | (5) whitespace, not a UUID, newline/space-padded UUID, number, null, undefined, injection-looking string            |
+| invalid id falls back to the `anon` role instead of throwing | (5) every invalid id, callback ran under a role, default context                                                    |
+| swallow the callback error inside the transaction            | (7) rollback, error propagation, database error; (2) after rollback; (3) failing concurrent call                    |
+| drop the empty tenant id check                               | (5) empty and whitespace tenant id                                                                                  |
+| anon variant switches to `authenticated`                     | anonymous variant (role anon, `auth.role()`)                                                                        |
+
 ## When the stack is down
 
 `pnpm test:db` fails immediately, before any test, with a message naming the
