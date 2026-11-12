@@ -1,0 +1,2 @@
+-- Placeholder seed, applied by 'pnpm db:reset' after all migrations.
+-- No data in epic 001 (FND-FR-05). The local app_backend password arrives with FND-T-11.
