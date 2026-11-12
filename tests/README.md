@@ -171,6 +171,59 @@ Lessons recorded while writing these: a first version of the insert case used
 Tests rely on `fileParallelism: false`: the guard on the real schema would see
 another file's throwaway tables if files ran in parallel.
 
+## Hardening catalog tests (FND-T-51)
+
+File: `tests/db/hardening-catalog.test.ts`. It locks the facts of the two
+migrations (`..._app_backend_role.sql`, `..._app_backend_timeouts_function_privileges.sql`)
+that neither the role tests nor the schema guard cover:
+
+- Timeouts (FND-NFR-05): `pg_roles.rolconfig` of `app_backend` holds
+  `statement_timeout=8s` and `idle_in_transaction_session_timeout=10s`; both are
+  the effective values inside `withRls` and `withAnonymousRls`; `pg_sleep(9)` is
+  cancelled with 57014 (this one test takes about 8 s, the price of proving the
+  setting really bites; a 0.05 s sleep is the control). The idle-in-transaction
+  timeout is checked from the catalog and the effective value only; waiting 10 s
+  with an idle transaction to see it fire was judged not worth the time.
+- Functions (FND-FR-08): a function created by `postgres` in `public` (and in a
+  new schema) has no EXECUTE for PUBLIC, `anon` or `authenticated` (read from
+  `proacl`, `has_function_privilege`, and by calling it: 42501), and works for
+  `authenticated` only after an explicit grant. No real function in `public` is
+  executable by `anon`.
+- Table and sequence grants (FND-FR-08, FND-FR-10): `anon` holds no table,
+  column or sequence privilege on any real `public` relation (tables, views,
+  partitions, sequences); a table or identity sequence created without grants
+  is closed to `anon` and `authenticated`. Throwaway `tmp_test_*` relations are
+  excluded from the real-schema scan (they are granted on purpose in their own
+  tests); the scan is shown to be non-vacuous by a granted control table. The
+  real schema is empty today, so the default-privilege tests (table without
+  grants, sequence) are what bite until epic 002 adds tables; the scan starts
+  protecting once real tables exist.
+- Known residual (ADR 0003): a table created as `supabase_admin` is still
+  granted to `anon`. The test pins the current behavior (anon IS granted) with a
+  comment; when it fails the residual risk has gone and the ADR note and the
+  test should be removed. It connects as `supabase_admin` with the local
+  password (loopback only, same guard as the rest of the suite).
+- Data API: `GET /rest/v1/` with the public local demo anon key is not 2xx and
+  has no OpenAPI document. It takes about 50 ms. The key is sent on purpose:
+  without it an enabled API would answer 401 and the test could not tell.
+
+Mutation record (SQL applied to the local database, the file run, then
+restored; nothing is committed):
+
+| Mutation                                                         | Tests that failed                                                  |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `statement_timeout` reset / set to 30s on `app_backend`          | rolconfig, effective authenticated, effective anon, pg_sleep (4)   |
+| `idle_in_transaction_session_timeout` reset                      | rolconfig, effective authenticated, effective anon (3)             |
+| default function EXECUTE granted back to PUBLIC                  | all 5 function tests (public, new schema, anon call, auth call)    |
+| default function EXECUTE in `public` granted to `anon`           | owner/service_role list, has_function_privilege, anon call (3)     |
+| default function EXECUTE in `public` granted to `authenticated`  | owner/service_role list, has_function_privilege, authenticated (3) |
+| default `select` on tables granted to `anon`                     | table without grants, anon read with RLS off (2)                   |
+| default `all` on tables granted to `authenticated`               | table without grants (1)                                           |
+| default `usage` on sequences granted to `anon` / `authenticated` | identity sequence (1 each)                                         |
+| real table / column grant / view / sequence granted to `anon`    | real-schema scan (1 each)                                          |
+| real function in `public` granted EXECUTE to `anon`              | no real function executable by anon (1)                            |
+| Data API enabled (`[api] enabled = true`, stack restarted)       | `/rest/v1/` test (1; the status becomes 200)                       |
+
 ## E2E (FND-T-17)
 
 Files: `playwright.config.ts` (root), `tests/e2e/home.spec.ts` (heading, HTTP 200,
