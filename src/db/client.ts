@@ -13,11 +13,20 @@ import { requireDatabaseUrl } from "@/lib/env.server";
  *
  * `prepare: false` because the cloud URL goes through Supabase's transaction
  * pooler, which does not support prepared statements. `max: 1` because each
- * serverless instance should hold a single connection. The client is created
- * once at module scope. `requireDatabaseUrl()` throws a clear error the first
- * time this module is loaded without `DATABASE_URL` (the variable is optional
- * at startup in production).
+ * serverless instance should hold a single connection.
+ *
+ * The client is created once, on first use, not at import time: `DATABASE_URL`
+ * is optional at startup in production, and `next build` imports every route
+ * module, so an eager client would break builds that have no database.
+ * `requireDatabaseUrl()` throws a clear error on first use without the variable.
  */
-export const db = drizzle(
-  postgres(requireDatabaseUrl(), { prepare: false, max: 1 }),
-);
+function createDb() {
+  return drizzle(postgres(requireDatabaseUrl(), { prepare: false, max: 1 }));
+}
+
+let instance: ReturnType<typeof createDb> | undefined;
+
+export function getDb(): ReturnType<typeof createDb> {
+  instance ??= createDb();
+  return instance;
+}
