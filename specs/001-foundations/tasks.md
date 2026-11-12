@@ -18,11 +18,12 @@
 
 | ID | Title | Assignee | Step | Depends on | Status |
 |----|-------|----------|------|------------|--------|
-| FND-T-01 | git init and `.gitignore` | developer | 1 | none | todo |
-| FND-T-02 | Next.js skeleton and toolchain | developer | 1 | T-01 | todo |
-| FND-T-03 | Typed environment configuration | developer | 1 | T-02 | todo |
-| FND-T-04 | Verify step 1 | tester | 1 | T-03 | todo |
-| FND-T-05 | Accept step 1 | product-manager | 1 | T-04 | todo |
+| FND-T-01 | git init and `.gitignore` | developer | 1 | none | done |
+| FND-T-02 | Next.js skeleton and toolchain | developer | 1 | T-01 | done |
+| FND-T-03 | Typed environment configuration | developer | 1 | T-02 | done |
+| FND-T-04 | Verify step 1 | tester | 1 | T-03 | done |
+| FND-T-49 | Step 1 follow-ups from T-04 (public env fails the build, relax Node pin) | developer | 1 | T-04 | done |
+| FND-T-05 | Accept step 1 | product-manager | 1 | T-04, T-49 | done |
 | FND-T-06 | Local Supabase, scripts, Data API off | developer | 2 | T-03 | todo |
 | FND-T-07 | `/api/health` liveness | developer | 2 | T-03 | todo |
 | FND-T-08 | Verify step 2 | tester | 2 | T-06, T-07 | todo |
@@ -670,3 +671,32 @@ Every FND-FR and FND-NFR appears at least once as a build task and at least once
 | Date | Change |
 |------|--------|
 | 2026-11-12 | First version of the task list (48 tasks). |
+
+### FND-T-49 Step 1 follow-ups from T-04
+
+- **Assignee:** developer. **Step:** 1. **Depends on:** FND-T-04 (verification report `specs/001-foundations/verification/step-1.md`, defects D1 and D3). Added after T-04; the PO accepted the tester's recommendations.
+- **Requirements:** FND-FR-03, FND-NFR-06.
+- **Goal:** (1) a build made without the public `NEXT_PUBLIC_*` variables must fail, naming the variable, instead of passing and returning 500 at `next start`; (2) the Node pin must accept any 26.x at or above 26.13.1 so Node security patches need no config change.
+- **Read first:** AGENTS.md, `verification/step-1.md`, `src/lib/env.ts`, `src/lib/env.server.ts`, `src/instrumentation.ts`, `next.config.ts`, `package.json`, `.nvmrc`, ADR 0004, the Execution notes at the end of this file.
+- **Do:** (1) make `next build` fail on missing or invalid `NEXT_PUBLIC_*` variables with the existing error format (names the variable, never the value); for example import the public env module from `next.config.ts` with a relative path (careful: `env.server.ts` imports `server-only`, which throws outside the Next server, so only the public module may be loaded in config; the server env stays validated at start). DB variables stay optional in production builds. (2) set `engines.node` to `>=26.13.1 <27` and `.nvmrc` to `26` (or the equivalent that keeps pnpm's engine-strict rejecting Node 24 and accepting 26.x); keep every dependency exact.
+- **Acceptance:** `pnpm build` with the three public variables set passes; with any one missing it fails and names it; with only DB variables missing it still passes; under Node 24 `pnpm install` still fails with `ERR_PNPM_UNSUPPORTED_ENGINE`; under Node 26.13.1 install, lint, typecheck, format:check and build pass. No new dependency unless unavoidable (say why).
+- **Out of scope:** tests (T-13 adds them), ADR/architecture wording (architect, T-36 and T-43), anything else.
+- **Output:** code and config changes. Commit scope `fix(env)`, body `Task: FND-T-49`.
+
+## Execution notes (hand-off between tasks; added by the orchestrator)
+
+Facts discovered while executing tasks that later tasks must know. Read the ones that name your task.
+
+- **Node:** Node 26.13.1 (active LTS) is pinned in `.nvmrc`/`engines` and is now the PO's system Node (installed with Homebrew `node`, replacing Node 24; pnpm 12.18.0 installed with Homebrew `pnpm`; Node 26 has no corepack, so do not use `corepack`). Agents no longer need a temporary Node copy; pnpm 12.18.0 via `packageManager`; `engineStrict` and `saveExact` live in `pnpm-workspace.yaml`. The PO's system Node is 24 and pnpm rejects it; agents use a temporary Node 26 copy on PATH. TypeScript is held at 6.0.3 and ESLint at 9.39.5 (typescript-eslint / peer ceilings); `lint` is `eslint .` (no `next lint` in Next 16). (T-02)
+- **`AGENTS.md` agent-rules block:** `pnpm dev`/`next dev` re-adds a "This is NOT the Next.js you know" block to `AGENTS.md`. Never commit it; revert with `git checkout AGENTS.md`. (T-02)
+- **`.vscode/`** may appear untracked (PO editor settings). Never stage it.
+- **Two env files (T-03, affects T-12, T-36, T-37, T-43):** `src/lib/env.ts` holds the public schema and `publicEnv` (safe for client code); `src/lib/env.server.ts` starts with `import "server-only"`, reads `process.env` for server variables, exports `serverEnv` and `requireDatabaseUrl()`; `src/instrumentation.ts` imports both so a bad env fails at startup. The boundary rules (T-37) must allow `env.server.ts`; `docs/architecture.md` and ADR 0004 need a note about the split (architect, T-36 and T-43). The T-12 DB module must call `requireDatabaseUrl()`.
+- **`app_backend` local password (T-11):** `.env.example` uses `postgresql://app_backend:app_backend_local_password@127.0.0.1:54322/postgres`. T-11's `seed.sql` must set the same password, or `.env.example` must be updated to match.
+- **Local anon key (T-06 / T-41):** `.env.example` has the placeholder `replace-with-local-anon-key`; the real value comes from `supabase status` and must be documented in the README.
+- **Public env vars are required at build time (T-21, T-24):** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL` are inlined at build, so CI and the Vercel build need them set (non-secret placeholder values are fine in CI; configure them for Vercel).
+- **Unit tests for `env.server.ts` (T-13):** `server-only` throws outside the Next.js server environment, so Vitest must alias or stub it.
+- **Commits:** no `Co-Authored-By` trailers or AI mentions (AGENTS.md). Every commit so far is authored by the PO's git identity.
+- **T-04 verdict (pass) and decisions:** step 1 passed. PO accepted the tester's recommendations: the `env.ts` / `env.server.ts` split stays (ADR 0004 and `docs/architecture.md` must be amended by the architect in T-36/T-43, and the T-37 boundary rules must allow `env.server.ts` and the `NEXT_RUNTIME` read in `src/instrumentation.ts`); public variables must fail the build and the Node pin is relaxed (both in T-49). The permanent assertion that no server-only variable reaches the client bundle belongs to T-13/T-37. gitleaks was not installed during T-04, so the secret scan was not run until T-22.
+- **`AGENTS.md` and `.vscode/` (orchestrator, commit 04533c8):** the Next.js agent-rules block is now committed in `AGENTS.md`, so `next dev` leaves the file unchanged (verified). Do not remove it; if a future Next upgrade rewrites it, commit that change with the upgrade. `.vscode/settings.json` and `.vscode/extensions.json` are versioned (Prettier, ESLint, workspace TypeScript); T-29 adds the Tailwind extension recommendation.
+- **T-49 (done):** `next.config.ts` now imports `./src/lib/env` (public env only), so `next build` fails on a missing/invalid `NEXT_PUBLIC_*` variable. Side effect: `next.config.ts` is also loaded by `next start` and `next dev`, so they too fail if the public variables are missing at runtime. For T-24 (Vercel deploy) and T-21 (CI): the three `NEXT_PUBLIC_*` variables must be configured both at build and at runtime on Vercel and in CI. `engines.node` is `>=26.13.1 <27` and `.nvmrc` is `26`. Under Node 24, a plain `pnpm install` prints "Already up to date" and skips the engine check; `pnpm install --force` triggers the rejection.
+- **T-05 (step 1 accepted):** see `acceptance/step-1.md`. Notes: under a wrong Node a plain `pnpm install` on an installed tree skips the engine check (README T-41 must say to check `node -v`; Node 26 has no corepack, use Homebrew or another manager for pnpm); the permanent server-only-in-client-bundle test is owed by T-13/T-37; the secret scan does not exist until T-22/T-23. Amendments owed later: ADR 0004 and `docs/architecture.md` (env split, `NEXT_PUBLIC_` validation in `next.config.ts`, `NEXT_RUNTIME` read in `src/instrumentation.ts`) by the architect in T-36/T-43; T-37 boundary rules must allow `env.server.ts`.
