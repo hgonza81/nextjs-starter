@@ -1,26 +1,16 @@
 # FND-FR-24: Dependabot version updates. It opens pull requests even though the
 # project works on a single branch; the Product Owner merges or ignores them.
 # Updates are grouped and capped so a week brings at most a few PRs.
+#
+# Only github-actions is listed on purpose. The npm ecosystem is not: its
+# updater runs Node 24, while the project enforces Node >=26.13.1 through
+# `engineStrict` (FND-FR-02), so every npm run fails with
+# ERR_PNPM_UNSUPPORTED_ENGINE. npm dependencies are updated manually, and
+# `pnpm audit` in CI stays informational. To re-add npm, restore a
+# `package-ecosystem: npm` entry (weekly, minor and patch grouped) once the
+# updater supports Node 26.
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 3
-    commit-message:
-      prefix: "chore(deps)"
-    groups:
-      # Minor and patch bumps of every npm package arrive as one PR. Major
-      # bumps stay separate (one PR each) because they need a human decision.
-      npm-minor-and-patch:
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch
-
   - package-ecosystem: github-actions
     directory: /
     schedule:
