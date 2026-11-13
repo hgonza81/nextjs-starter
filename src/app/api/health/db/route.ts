@@ -7,6 +7,7 @@
 import { sql } from "drizzle-orm";
 
 import { withAnonymousRls } from "@/db";
+import { logger } from "@/lib/logger";
 
 // Evaluated per request: a prerendered answer would hide a database outage.
 export const dynamic = "force-dynamic";
@@ -14,8 +15,8 @@ export const dynamic = "force-dynamic";
 /**
  * Readiness probe. 200 `{ "status": "ok", "role": "anon" }` when a query ran
  * as `anon`; 503 `{ "status": "unavailable" }` otherwise. The body and the
- * logs never contain connection details: the caught error is not logged, only
- * its class name.
+ * logs never contain connection details: the logger reduces the caught error
+ * to its name and code.
  */
 export async function GET(): Promise<Response> {
   try {
@@ -24,10 +25,8 @@ export async function GET(): Promise<Response> {
     );
     return Response.json({ status: "ok", role: rows[0]?.current_user });
   } catch (error) {
-    console.error(
-      "Database health check failed:",
-      error instanceof Error ? error.name : "unknown error",
-    );
+    // `exception` records only the error name and code, never the message.
+    await logger.exception("health.db.failed", error);
     return Response.json({ status: "unavailable" }, { status: 503 });
   }
 }

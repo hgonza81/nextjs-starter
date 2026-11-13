@@ -242,11 +242,22 @@ const boundaryRules = [
   },
 ];
 
+// PH-FR-10: no ad hoc console in application code; the logger is the only
+// writer. Its own stdout write uses process.stdout, not console.
+const noConsole = [
+  {
+    files: SOURCE_FILES,
+    ignores: ["src/lib/logger.ts"],
+    rules: { "no-console": "error" },
+  },
+];
+
 export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
   prettier,
   ...boundaryRules,
+  ...noConsole,
   globalIgnores([
     ".next/**",
     "out/**",

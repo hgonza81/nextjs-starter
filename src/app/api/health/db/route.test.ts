@@ -20,13 +20,12 @@ const FORBIDDEN_FRAGMENTS = [
   "6543",
 ];
 
-let consoleSpies: ReturnType<typeof vi.spyOn>[];
+// The logger writes JSON lines to stdout (PH-FR-09), so that is what we watch.
+let stdoutSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   withAnonymousRls.mockReset();
-  consoleSpies = (["log", "info", "warn", "error", "debug"] as const).map(
-    (method) => vi.spyOn(console, method).mockImplementation(() => {}),
-  );
+  stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 });
 
 afterEach(() => {
@@ -35,10 +34,7 @@ afterEach(() => {
 
 function loggedText(): string {
   // inspect() prints Error messages and stacks, which JSON.stringify drops.
-  return inspect(
-    consoleSpies.flatMap((spy) => spy.mock.calls),
-    { depth: 10, maxStringLength: null },
-  );
+  return inspect(stdoutSpy.mock.calls, { depth: 10, maxStringLength: null });
 }
 
 describe("GET /api/health/db", () => {
@@ -91,7 +87,7 @@ describe("GET /api/health/db", () => {
   );
 
   it.each(FORBIDDEN_FRAGMENTS)(
-    "FND-FR-05: nothing logged through console contains %s from the thrown error",
+    "FND-FR-05: nothing logged contains %s from the thrown error",
     async (fragment) => {
       const error = new Error(`connect ECONNREFUSED ${CONNECTION_STRING}`);
       error.stack = `Error: ${CONNECTION_STRING}\n    at connect (db.example.com:6543)`;
@@ -118,7 +114,7 @@ describe("GET /api/health/db", () => {
 
     await GET();
 
-    expect(consoleSpies.some((spy) => spy.mock.calls.length > 0)).toBe(true);
+    expect(stdoutSpy.mock.calls.length > 0).toBe(true);
   });
 
   it("FND-FR-11: is evaluated per request, never prerendered", () => {
