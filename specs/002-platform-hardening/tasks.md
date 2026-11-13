@@ -45,8 +45,8 @@
 | PH-T-25 | SDK bootstrap, trace export, metrics pipeline | developer | 2 | T-24 | done |
 | PH-T-26 | Logger bridge to OpenTelemetry logs | developer | 2 | T-25 | done |
 | PH-T-27 | Local collector: compose file, scripts, documented variables | developer | 2 | T-24, T-25 (sequential: both edit `package.json`) | done |
-| PH-T-28 | Tests: env schema, telemetry off, bad-variable process test | tester | 2 | T-25 | todo |
-| PH-T-29 | E2E: telemetry with receiver and closed port | tester | 2 | T-26, T-13 | todo |
+| PH-T-28 | Tests: env schema, telemetry off, bad-variable process test | tester | 2 | T-25 | done |
+| PH-T-29 | E2E: telemetry with receiver and closed port | tester | 2 | T-26, T-13, T-64 | todo |
 | PH-T-30 | Manual check of the collector | tester | 2 | T-26, T-27 | todo |
 | PH-T-31 | Architect check of step 2 and ADR 0013 confirmation | architect | 2 | T-28, T-29, T-30 | todo |
 | PH-T-32 | Accept step 2 | product-manager | 2 | T-31 | todo |
@@ -81,6 +81,7 @@
 | PH-T-61 | Final tester read | tester | 6 | T-59 (Independent of T-60) | todo |
 | PH-T-62 | Final acceptance | product-manager | 6 | T-60, T-61 | todo |
 | PH-T-63 | Fix: `request_id` missing on route-handler failures logged by the hook | developer | 1 | T-20 | done |
+| PH-T-64 | Adjust the bad-variable startup test to the relaxed PH-AC-23 | tester | 2 | T-28 | todo |
 
 Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-ux-designer 1. Total 62.
 
@@ -410,6 +411,17 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Out of scope:** E2E telemetry (T-29).
 - **Output:** test files. Commit scope `test(obs)`.
 - **Dependencies:** PH-T-25.
+
+### PH-T-64 Adjust the bad-variable startup test to the relaxed PH-AC-23
+- **Assignee:** tester
+- **Goal:** the startup test matches the relaxed PH-AC-23 (the process does not exit on Next.js 16; found by PH-T-28).
+- **Requirements:** PH-FR-13, PH-AC-23.
+- **Read first:** `tests/e2e/telemetry-config-startup.spec.ts` (the `test.fail()` case and the comment at the top), spec PH-FR-13 and PH-AC-23 (updated 2026-11-13), `src/instrumentation.ts`.
+- **Do:** replace the `test.fail()` "non-zero exit" case with a positive test: with a bad `OTEL_*` value the output names the variable, never prints the value, and `/api/health` answers 500; remove the defect comment; stop the server by PID.
+- **Acceptance:** the spec passes without `test.fail()`; lint, typecheck, format:check, unit and E2E suites pass.
+- **Out of scope:** changing `register()`; other tests.
+- **Output:** the updated spec file. Commit scope `test(e2e)`.
+- **Dependencies:** PH-T-28.
 
 ### PH-T-29 E2E: telemetry with receiver and closed port
 - **Assignee:** tester
@@ -856,3 +868,4 @@ Every PH-FR and PH-NFR appears at least once as a build task and once as a verif
 | 2026-11-13 | First draft written, after spec round 2 fixes. Status Draft; not executable until the spec is approved. |
 | 2026-11-13 | Traceability findings F1-F8 applied: PH-AC-76 unit test added to T-18 and listed in T-59; T-06 added to dependencies of the page and hook tasks (via the fixtures task); `flows.md` sections 4-6 added to the common read-first; trace id test and dev-only in-memory exporter added to T-14; wrong PH-AC-11 citation removed from the errors test task; old T-06 split into T-06 (seam and gate) and T-07 (fixtures), old T-18 split into T-19 (capture) and T-20 (leakage, wrapper, request id), old T-35 split into T-37 (CSP, headers, nonce) and T-38 (Server Action origin and size); collector task made sequential after the SDK bootstrap task; critical-path wording fixed. All task IDs after T-06 renumbered (59 tasks became 62); status table, dependencies, matrix, critical path and cross-references updated. Statuses unchanged: Draft / todo. |
 | 2026-11-13 | Added fix task PH-T-63 (route-handler failures lacked `request_id`, found by PH-T-20); PH-T-21 now depends on it. Total 63 tasks. |
+| 2026-11-13 | Added PH-T-64 (relaxed PH-AC-23: Next.js 16 does not exit on an invalid OTEL_* value). Total 64 tasks. |
