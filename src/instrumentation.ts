@@ -8,7 +8,13 @@ import type { Instrumentation } from "next";
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("@/lib/env");
-    await import("@/lib/env.server");
+    const { serverEnv } = await import("@/lib/env.server");
+    // PH-FR-11: telemetry is opt-in. The SDK module is imported only when an
+    // endpoint is set, so it costs nothing and prints nothing otherwise.
+    if (serverEnv.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined) {
+      const { startTelemetry } = await import("@/instrumentation.node");
+      startTelemetry();
+    }
   }
 }
 

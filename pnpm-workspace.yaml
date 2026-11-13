@@ -2,6 +2,9 @@
 # install script is not needed.
 allowBuilds:
   esbuild: false
+  # protobufjs (via sdk-node's gRPC exporters, unused here) has an optional
+  # install script that is not needed (ADR 0013).
+  protobufjs: false
 # pnpm 12 ignores .npmrc for these settings, so they live here.
 # engineStrict: installing under a different Node major fails (FND-FR-02).
 # saveExact: dependencies are pinned to exact versions (FND-NFR-06).

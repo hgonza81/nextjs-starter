@@ -4,7 +4,7 @@
  * Wires a real tracer provider to an in-memory exporter and installs a minimal
  * AsyncLocalStorage context manager, so `trace.getActiveSpan()` works across
  * `await` exactly as it does under the production SDK. Nothing here ships:
- * `@opentelemetry/sdk-trace-base` is a devDependency (ADR 0010).
+ * `@opentelemetry/sdk-trace` is a devDependency (ADR 0010).
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -16,10 +16,10 @@ import {
   trace,
 } from "@opentelemetry/api";
 import {
-  BasicTracerProvider,
+  TracerProvider,
   InMemorySpanExporter,
   SimpleSpanProcessor,
-} from "@opentelemetry/sdk-trace-base";
+} from "@opentelemetry/sdk-trace";
 
 class AsyncLocalStorageContextManager implements ContextManager {
   private readonly storage = new AsyncLocalStorage<Context>();
@@ -64,8 +64,8 @@ export type TestTracing = {
 
 export function installTestTracing(): TestTracing {
   const exporter = new InMemorySpanExporter();
-  const provider = new BasicTracerProvider({
-    spanProcessors: [new SimpleSpanProcessor(exporter)],
+  const provider = new TracerProvider({
+    spanProcessors: [new SimpleSpanProcessor({ exporter })],
   });
   const contextManager = new AsyncLocalStorageContextManager();
   context.setGlobalContextManager(contextManager);
