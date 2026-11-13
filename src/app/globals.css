@@ -1,0 +1,291 @@
+/*
+ * THE token file (docs/design-system.md, FND-FR-15). Every design token lives
+ * here and nowhere else: no color literal may appear in application or
+ * component code (design system rule 1.1).
+ *
+ * Theming: each theme-dependent token is declared ONCE with light-dark() and
+ * the root sets `color-scheme: light dark`, so the browser resolves the theme
+ * from the OS setting before first paint. There is no .dark class, no `dark:`
+ * utility and no theme provider.
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Reset the default Tailwind palette so raw palette classes (bg-blue-500,
+ * text-gray-600) do not generate; only the role colors mapped below exist.
+ * Must stay a plain @theme block: the reset has to run before the mapping.
+ */
+@theme {
+  --color-*: initial;
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* ------------------------------------------------------------------ */
+  /* BRAND: the only block to edit to change the accent (design system  */
+  /* 2.9). --ring, links, the active nav indicator and the spinner      */
+  /* derive from it. After editing, re-run the contrast checklist in    */
+  /* design system 2.2 and the axe check on /design.                    */
+  /* ------------------------------------------------------------------ */
+  --primary: light-dark(#4f46e5, #818cf8);
+  --primary-hover: light-dark(#4338ca, #a5b4fc);
+  --primary-active: light-dark(#3730a3, #c7d2fe);
+  --primary-foreground: light-dark(#ffffff, #0a0a0a);
+  --ring: var(--primary);
+
+  /* Neutral and surface roles (design system 2.2) */
+  --background: light-dark(#ffffff, #0a0a0a);
+  --foreground: light-dark(#0a0a0a, #fafafa);
+  --card: light-dark(#ffffff, #171717);
+  --card-foreground: light-dark(#0a0a0a, #fafafa);
+  --popover: light-dark(#ffffff, #171717);
+  --popover-foreground: light-dark(#0a0a0a, #fafafa);
+  --muted: light-dark(#f5f5f5, #262626);
+  --muted-foreground: light-dark(#636363, #a1a1a1);
+  /* shadcn naming: --accent is a NEUTRAL hover surface, not the brand color. */
+  --accent: light-dark(#f5f5f5, #262626);
+  --accent-foreground: light-dark(#0a0a0a, #fafafa);
+  /* --border is decorative; --input is darker because a control boundary
+     must reach 3:1 (WCAG 1.4.11). */
+  --border: light-dark(#e5e5e5, #2e2e2e);
+  --input: light-dark(#8c8c8c, #696969);
+  --overlay: light-dark(rgb(10 10 10 / 0.5), rgb(0 0 0 / 0.7));
+
+  /* Status roles: solid, text on solid, subtle surface, text on subtle */
+  --destructive: light-dark(#b91c1c, #f87171);
+  --destructive-hover: light-dark(#991b1b, #fca5a5);
+  --destructive-foreground: light-dark(#ffffff, #0a0a0a);
+  --destructive-subtle: light-dark(#fef2f2, #450a0a);
+  --destructive-subtle-foreground: light-dark(#991b1b, #fca5a5);
+  --success: light-dark(#15803d, #4ade80);
+  --success-foreground: light-dark(#ffffff, #0a0a0a);
+  --success-subtle: light-dark(#f0fdf4, #052e16);
+  --success-subtle-foreground: light-dark(#166534, #86efac);
+  --warning: light-dark(#b45309, #fbbf24);
+  --warning-foreground: light-dark(#ffffff, #0a0a0a);
+  --warning-subtle: light-dark(#fffbeb, #451a03);
+  --warning-subtle-foreground: light-dark(#92400e, #fcd34d);
+  --info: light-dark(#0369a1, #38bdf8);
+  --info-foreground: light-dark(#ffffff, #0a0a0a);
+  --info-subtle: light-dark(#f0f9ff, #082f49);
+  --info-subtle-foreground: light-dark(#075985, #7dd3fc);
+
+  /* Sidebar roles (app shell). --sidebar-primary* is intentionally absent:
+     the active item uses --primary for its indicator. */
+  --sidebar: light-dark(#fafafa, #171717);
+  --sidebar-foreground: light-dark(#0a0a0a, #fafafa);
+  --sidebar-accent: light-dark(#ebebeb, #262626);
+  --sidebar-accent-foreground: light-dark(#0a0a0a, #fafafa);
+  --sidebar-border: light-dark(#e5e5e5, #2e2e2e);
+  --sidebar-ring: var(--ring);
+
+  /* Radius base; the scale is derived in @theme inline below. */
+  --radius: 0.625rem;
+
+  /* Z-index scale: no other z-index values (design system 2.5). */
+  --z-sticky: 10;
+  --z-overlay: 40;
+  --z-drawer: 50;
+  --z-toast: 100;
+
+  /* Motion (design system 2.6) */
+  --duration-fast: 100ms;
+  --duration-base: 150ms;
+  --duration-slow: 250ms;
+
+  /* Density (design system 2.8): touch targets are 44px below md. */
+  --control-height: 2.75rem;
+  --control-height-compact: 2.75rem;
+  --row-height: 3rem;
+  --row-height-compact: 3rem;
+  --sidebar-width: 16rem;
+}
+
+/*
+ * Shadows and easing live in a static @theme block so they generate both the
+ * utilities (shadow-md, ease-standard) and the variables. Shadows are neutral
+ * black and stronger in dark, because dark surfaces rely on border and lighter
+ * fill (design system 2.5).
+ */
+@theme static {
+  --shadow-xs: 0 1px 2px 0 light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.3));
+  --shadow-sm:
+    0 1px 3px 0 light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.4)),
+    0 1px 2px -1px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.4));
+  --shadow-md:
+    0 4px 6px -1px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.4)),
+    0 2px 4px -2px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.4));
+  --shadow-lg:
+    0 10px 15px -3px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.4)),
+    0 4px 6px -4px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.4));
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* md breakpoint (768px): pointer-first density. */
+@media (min-width: 48rem) {
+  :root {
+    --control-height: 2.5rem;
+    --control-height-compact: 2rem;
+    --row-height-compact: 2.5rem;
+  }
+}
+
+/*
+ * Side-by-side theme panels on /design: data-theme only sets color-scheme on
+ * the panel, so light-dark() resolves per panel. The page itself keeps
+ * following the system. The panel also repaints its own surface and text.
+ */
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme] {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Maps tokens to Tailwind utilities (bg-primary, text-muted-foreground, ...).
+   `inline` makes utilities reference the variable at the point of use, so
+   the per-element color-scheme above is honored. */
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-destructive-subtle-foreground: var(--destructive-subtle-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-subtle-foreground: var(--success-subtle-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-subtle-foreground: var(--warning-subtle-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-subtle: var(--info-subtle);
+  --color-info-subtle-foreground: var(--info-subtle-foreground);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/* Utilities for tokens that Tailwind has no theme namespace for. */
+@utility h-control {
+  height: var(--control-height);
+}
+
+@utility h-control-compact {
+  height: var(--control-height-compact);
+}
+
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+
+@utility z-drawer {
+  z-index: var(--z-drawer);
+}
+
+@utility z-toast {
+  z-index: var(--z-toast);
+}
+
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+
+@utility duration-slow {
+  transition-duration: var(--duration-slow);
+}
+
+/*
+ * The shared focus ring (design system section 4): a 2px solid --ring OUTLINE
+ * with a 2px offset. An outline, not a box-shadow, so it survives Windows
+ * forced-colors mode. Only on :focus-visible, never at reduced opacity.
+ */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/*
+ * Reduced motion (design system 2.6): transitions and animations collapse to
+ * about zero, so drawers and toasts appear without sliding, skeletons do not
+ * pulse and the spinner is static. Loading is never conveyed by motion alone.
+ * !important is required to beat component-level and third-party (Sonner)
+ * styles.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
