@@ -10,6 +10,7 @@ import {
 import { LayoutsSection } from "@/app/design/_sections/layouts-section";
 import { PatternsSection } from "@/app/design/_sections/patterns-section";
 import { ScaleSection } from "@/app/design/_sections/scale-section";
+import { StatusPageSection } from "@/app/design/_sections/status-page-section";
 import { TypographySection } from "@/app/design/_sections/typography-section";
 import { TextLink } from "@/components/ui/text-link";
 
@@ -25,6 +26,7 @@ const SECTION_LINKS = [
   { id: "components", label: "Components" },
   { id: "layouts", label: "Layouts" },
   { id: "patterns", label: "Patterns" },
+  { id: "status-page", label: "Status page" },
 ] as const;
 
 /**
@@ -83,6 +85,7 @@ export default function DesignPage() {
       <ComponentsSection />
       <LayoutsSection />
       <PatternsSection />
+      <StatusPageSection />
     </main>
   );
 }
