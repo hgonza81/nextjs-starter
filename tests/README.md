@@ -283,12 +283,14 @@ nothing:
 E2E_BASE_URL=https://my-app.example.com pnpm exec playwright test tests/e2e/health.spec.ts
 ```
 
-Run only `health.spec.ts` that way: `home.spec.ts` is also valid remotely but is
-not the hello-world check. Verified locally against a separately started
-`next start`.
+In that mode the config defines a single `deployed` project that only matches
+`health.spec.ts` and `design-gate.spec.ts` (see the next section), so a bare
+`E2E_BASE_URL=<url> pnpm exec playwright test` is safe too: the other specs need
+the `/design` page and would fail against a deployment. Verified locally against
+a separately started `next start`.
 
-Scope rule: axe runs on every key page in E2E. `/design` checks arrive with
-FND-T-33; add each new page to the axe tests when the page exists.
+Scope rule: axe runs on every key page in E2E; add each new page to the axe
+tests when the page exists.
 
 Mutation record (each applied temporarily, E2E run, restored with
 `git checkout`; never committed):
@@ -301,6 +303,74 @@ Mutation record (each applied temporarily, E2E run, restored with
 | 2000 px wide element added                        | both horizontal-scroll tests red                      |
 | `/api/health` body changed to `{"status":"down"}` | health test red                                       |
 | `console.error` script added to the home page     | console test red                                      |
+
+## E2E: design system (FND-T-33)
+
+Files in `tests/e2e/` (helpers in `tests/e2e/helpers/`), 100 new tests:
+
+| File                         | Requirement           | What it checks                                                                                                                                                                                                                         |
+| ---------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `design-a11y.spec.ts`        | FND-NFR-03            | axe (wcag2a/aa, 21a/aa, 22aa), zero violations: `/design` at 375 and 1280 in both OS color schemes with all 18 iframes loaded; each frame route at 375/768/1280 x OS light/dark x no theme, `?theme=light`, `?theme=dark` (54 combos)  |
+| `design-layout.spec.ts`      | FND-NFR-04            | `/design` has no horizontal page scroll at 375 and 1280 (home page: `home.spec.ts`)                                                                                                                                                    |
+| `design-theme.spec.ts`       | FND-FR-15, FND-FR-16  | key tokens resolve to the `globals.css` values in light and dark; dark OS first paint with JavaScript off; SSR HTML has the stylesheet and no theme script/class; background at the first paint entry; `data-theme` panel on `/design` |
+| `design-form-field.spec.ts`  | FND-FR-16             | `aria-invalid`, `aria-describedby` to the polite live error, `aria-required`, focus on the first invalid field, password toggle with Enter and Space                                                                                   |
+| `design-app-shell.spec.ts`   | FND-FR-16, FND-NFR-03 | drawer at 375 through the app-shell frame: keyboard open, dialog named Navigation, focus inside, Tab/Shift+Tab trap, Escape returns focus, resize across `md` closes it; skip link focuses `#main-content`                             |
+| `design-live-states.spec.ts` | FND-FR-16             | Button hover/active tokens, 2px ring on keyboard focus only, disabled and loading ignore click and Enter                                                                                                                               |
+| `design-toast.spec.ts`       | FND-FR-16             | exactly one Sonner region on `/` and `/design`, a trigger shows one toast in the polite live region                                                                                                                                    |
+| `design-gate.spec.ts`        | FND-FR-17             | `/design` and sub-routes return 404 with the flag off; `/` and `/api/health` stay 200                                                                                                                                                  |
+
+Two servers, one build. `pnpm test:e2e` builds once, then starts two
+production servers from that build: port 3100 with `DESIGN_PAGE_ENABLED=true`
+(project `chromium`, every spec except the gate) and port 3101 with the flag
+unset (project `design-gate-off`, only `design-gate.spec.ts`). The second port
+is `E2E_PORT + 1`; the flag is removed from its environment even if exported in
+the caller's shell. Web servers start in order, so the second one only starts
+after the build is done. CI needs no change: the `database-and-e2e` job runs
+`pnpm test:e2e`, which goes through `playwright.config.ts`.
+
+Against a deployment (FND-T-46: Vercel has no flag, so `/design` must be 404):
+
+```bash
+E2E_BASE_URL=https://my-app.example.com pnpm exec playwright test tests/e2e/health.spec.ts tests/e2e/design-gate.spec.ts
+```
+
+Notes and limits:
+
+- The 18 lazy iframes of `/design` are made eager (`loading = "eager"`) and
+  waited for before axe runs, so the checked DOM is the same on every run.
+- Expected token colors are read from `src/app/globals.css` by the test (no
+  hex is duplicated), and actual colors come from a probe element that uses
+  `var(--token)`. Color transitions (100 ms) are awaited with `expect.poll`.
+- "Ignores click" for a loading Button is observed as: the click reaches the
+  page but is default-prevented by the Button (a form would not submit), and no
+  state changes. `/design` has no handler or form to observe more than that.
+- The drawer hides the page from assistive technology while open (Radix), so
+  the hamburger's `aria-expanded` is read through its attribute selector then.
+- Playwright treats `aria-disabled` as not actionable, so the loading Button
+  is clicked with `force: true`.
+- Not covered: `prefers-reduced-motion`, the toast auto-dismiss, WebKit and
+  Firefox, visual regression (out of scope of the task).
+
+Mutation record (each applied temporarily, `pnpm test:e2e` run, restored with
+`git checkout -- src`; never committed). Baseline is 106 passed.
+
+| Mutation                                                              | Result                                                              |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| low-contrast paragraph (`#ccc` on `#fff`) added to the `/design` page | 4 red (axe on `/design`, 375 and 1280, light and dark)              |
+| unlabeled `<input>` added to the `/design` page                       | 4 red (same four)                                                   |
+| `gateDesignPage` call removed from `src/app/design/layout.tsx`        | 6 red (all `design-gate.spec.ts` 404 tests)                         |
+| `aria-describedby` never set in `form-field.tsx`                      | 1 red (invalid control points at the live error)                    |
+| raw `bg-[#123456]` on the default Button                              | 23 red (live-state color test and axe contrast on `/design` frames) |
+| default Button hover uses `bg-primary` instead of `bg-primary-hover`  | 1 red (hover token test)                                            |
+| `dark:bg-muted` added to `card.tsx` (unit check, `pnpm test`)         | 1 red (`design-consistency.test.ts`)                                |
+| Escape ignored in the drawer (`onEscapeKeyDown` prevented)            | 1 red (Escape closes and returns focus)                             |
+| drawer `modal={false}` only                                           | green: equivalent (Radix `FocusScope` still loops Tab inside)       |
+| drawer `modal={false}` and Tab keydown stopped before the focus scope | 1 red (Tab and Shift+Tab never leave the drawer)                    |
+| second `<Toaster />` in the root layout                               | 4 red (both region counts, single toast, other panel)               |
+| loading guard removed from `button.tsx`                               | 1 red (loading Button ignores click and Enter)                      |
+| `tabIndex={-1}` removed from `#main-content`                          | 2 red (skip link at 375 and 1280)                                   |
+| inline script that adds a `dark` class added to the root layout       | 1 red (server HTML has no theme script or class)                    |
+| hamburger `aria-label` changed to "Menu"                              | 5 red (drawer tests)                                                |
 
 ## When the stack is down
 
