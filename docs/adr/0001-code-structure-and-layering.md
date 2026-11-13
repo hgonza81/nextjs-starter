@@ -26,7 +26,7 @@ src/
   app/              routing only; thin pages, route handlers, actions that call module APIs
   modules/<name>/   index.ts (public API), actions/, queries/ (Drizzle via withRls), schemas/ (Zod), components/, types.ts
   db/               client.ts (private, lazy getDb()), rls.ts, schema/ (generated), index.ts (public: withRls, withAnonymousRls, tables, types)
-  lib/              env.ts (public), env.server.ts (server-only), supabase/ (Auth clients only), utils; domain-free
+  lib/              env.ts (public), env.server.ts (server-only), utils; domain-free (Auth client factories arrive in epic 002)
 supabase/           config.toml, migrations/, seed.sql
 ```
 
@@ -63,3 +63,6 @@ The rules above hold with these explicit, narrow exceptions found while implemen
 
 ## References
 - AGENTS.md (structure rule), specs/001-foundations/reviews/architect.md (rounds 1-2), reviews/developer.md (round 2, shared schema proposal).
+
+## Amendment (FND-T-36, 2026-11-13): lint tooling chosen
+ADR 0001 left the tool to the developer. Chosen and implemented in FND-T-37 (`eslint.config.mjs`): ESLint 9.39.5 flat config with core `no-restricted-imports`, `no-restricted-syntax` and `no-restricted-properties` (rules a to d, f, `sql.raw`, `process.env`) and `import/no-cycle` (rule e). No dependency is added: `import/no-cycle` comes from `eslint-plugin-import@2.32.0`, already installed and registered by `eslint-config-next@16.4.6` with the TypeScript resolver, and the pinned 24-hour `minimumReleaseAge` is not involved. Rejected: `eslint-plugin-boundaries` (new dependency, fast-moving major) and `dependency-cruiser` (separate CLI outside `pnpm lint`). Known limit: the string-matching rules can be bypassed by some relative paths (listed, with a resolver-based hardening using `import/no-restricted-paths`, in `docs/architecture.md`, section "Lint rules"). That section is also the rule-by-rule mapping to conventions C1 to C12. `src/lib/supabase/` was removed from the tree above because it does not exist in epic 001; epic 002 creates the Auth client factories and records their location.

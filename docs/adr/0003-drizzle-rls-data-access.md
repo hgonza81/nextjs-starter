@@ -28,7 +28,7 @@ Option 1 with connection choice (b).
 4. Runs `fn(tx)`; queries must use `tx`. Commit or rollback resets everything.
 One `withRls` call per use case; multi-step writes live in one callback or in a database function. No external network calls inside the callback.
 
-**Exports.** `src/db/index.ts` exports `withRls`, `withAnonymousRls`, the types `VerifiedContext` and `RlsTransaction`, and the schema tables. The raw client (`src/db/client.ts`) is not exported; lint (`no-restricted-imports`, FND-T-37) forbids importing it outside `src/db`. The client is a memoized lazy `getDb()` (created on first use, still one private `server-only` instance), not a module-scope constant: `next build` imports every route module and `DATABASE_URL` is optional in production (ADR 0004), so an eager client broke builds without a database.
+**Exports.** `src/db/index.ts` exports `withRls`, `withAnonymousRls`, the types `VerifiedContext` and `RlsTransaction`, and the schema tables. The raw client (`src/db/client.ts`) is not exported; lint (FND-T-37; mechanism in `docs/architecture.md`, "Lint rules") forbids importing it outside `src/db`. The client is a memoized lazy `getDb()` (created on first use, still one private `server-only` instance), not a module-scope constant: `next build` imports every route module and `DATABASE_URL` is optional in production (ADR 0004), so an eager client broke builds without a database.
 
 **Verified claims only.** `ctx` is a `VerifiedContext` (userId, claims, optional tenantId) constructed only by server code after `supabase.auth.getUser()` or `getClaims()` (validated, not a plain decode of the cookie) and, for tenant, after a membership check. `withRls` refuses to run with missing or empty user. In 001 the type, function and a test helper exist; the real constructor arrives in epic 002 (auth module).
 
@@ -38,7 +38,7 @@ One `withRls` call per use case; multi-step writes live in one callback or in a 
 
 **Service role.** `SUPABASE_SERVICE_ROLE_KEY` is not provisioned in 001. If epic 002 needs the Auth admin API it goes in one `server-only` file with a lint allowlist. Drizzle never uses it; no bypass handle exists. Drizzle never writes to the `auth` schema (FK references only).
 
-**Data API disabled.** Set `[api] enabled = false` locally (config.toml; documented option, default true) and turn off "Enable Data API" in the cloud project when it exists, so the anon key cannot reach tables at all. Auth endpoints are unaffected. `supabase-js` and `@supabase/ssr` are used for Auth only; lint (`no-restricted-syntax`) blocks `.from()` / `.rpc()` data calls. This hardening was proposed by the architect in round 2 and is not among the PO's round 2 confirmations; it is recorded here as accepted but flagged for explicit PO confirmation (the alternative, leaving the Data API on, relies on RLS alone for that path).
+**Data API disabled.** Set `[api] enabled = false` locally (config.toml; documented option, default true) and turn off "Enable Data API" in the cloud project when it exists, so the anon key cannot reach tables at all. Auth endpoints are unaffected. `supabase-js` and `@supabase/ssr` are used for Auth only; lint (`no-restricted-syntax`, syntactic and therefore a second layer behind the disabled Data API) blocks `.from()` / `.rpc()` data calls. This hardening was proposed by the architect in round 2 and is not among the PO's round 2 confirmations; it is recorded here as accepted but flagged for explicit PO confirmation (the alternative, leaving the Data API on, relies on RLS alone for that path).
 
 **Connections.**
 - `DATABASE_URL` (runtime): role `app_backend`. Local and CI: direct `127.0.0.1:54322`. Cloud/Vercel (later): Supabase pooler, transaction mode, port 6543, username format from the dashboard (`<role>.<project-ref>` pattern; verify when created), SSL required.
@@ -60,7 +60,7 @@ One `withRls` call per use case; multi-step writes live in one callback or in a 
 | 8 | A query without `withRls` as `app_backend` is denied | `with-rls-context.test.ts`, `app-backend-role.test.ts` |
 | 9 | A table without a policy returns zero rows through `withRls` | `schema-guard.test.ts` |
 | G | Schema guard (FND-FR-22): every `public` table has RLS enabled and a policy except an allowlist; queries the catalog; the guard itself is tested | `schema-guard.test.ts`, `tests/utils/schema-guard.ts` |
-| L | Lint fixture proves the raw-client import restriction (FND-FR-12) | FND-T-38 (not yet written) |
+| L | Lint fixture proves the raw-client import restriction (FND-FR-12) | FND-T-38 |
 
 ## Consequences
 - Positive: fail-closed by role design, not discipline; one reviewed data path; tests cover the single point of failure.
@@ -86,9 +86,9 @@ Reviewed against the code and the running stack (Supabase CLI 3.1.0, Postgres 17
 - An `INSERT ... RETURNING` also needs a passing SELECT policy. Every real table needs explicit `GRANT`s plus RLS in its own migration (default privileges were revoked for `postgres`).
 
 **Residual risks**
-- Default privileges are revoked only for the owner `postgres`. `postgres` cannot change `supabase_admin`'s defaults (42501), and a table created in `public` as `supabase_admin` is still auto-granted to `anon`/`authenticated` (reproduced). Acceptable because migrations, Studio SQL and the CLI run as `postgres`. Mitigations: never create objects as `supabase_admin`; the schema guard already fails such a table unless it has RLS and a policy; add a catalog test that `anon` holds no privilege on any `public` table or sequence (open issue 3).
+- Default privileges are revoked only for the owner `postgres`. `postgres` cannot change `supabase_admin`'s defaults (42501), and a table created in `public` as `supabase_admin` is still auto-granted to `anon`/`authenticated` (reproduced). Acceptable because migrations, Studio SQL and the CLI run as `postgres`. Mitigations: never create objects as `supabase_admin`; the schema guard already fails such a table unless it has RLS and a policy; the catalog test that `anon` holds no privilege on any `public` table or sequence exists (FND-T-51, `tests/db/hardening-catalog.test.ts`).
 - Default privileges on **functions**: revoked by migration `20261112130000_app_backend_timeouts_function_privileges.sql` (FND-T-50) for functions created by `postgres`: the PUBLIC default is removed with a non-schema-scoped `alter default privileges`, and `anon`/`authenticated` in `public`; only the owner and `service_role` keep EXECUTE. Epic 002's `SECURITY DEFINER` membership helpers need an explicit `grant execute ... to authenticated`. The `supabase_admin` residual case is the same as for tables.
-- `statement_timeout` is not applied: role-level settings of `authenticated` (8s) and `anon` (3s) apply at login, not on `SET ROLE`, and `app_backend` has none, so queries are unbounded (verified: `show statement_timeout` = 0 inside `withRls`). Open issue 1.
+- Timeouts: **resolved in FND-T-50.** The reviewed finding was that role-level settings of `authenticated` (8s) and `anon` (3s) apply at login, not on `SET ROLE`, so queries through `app_backend` were unbounded. `app_backend` now has its own `statement_timeout = '8s'` and `idle_in_transaction_session_timeout = '10s'`, effective inside `withRls` (see Open issues, item 1).
 - `/api/health/db` is an unauthenticated route that opens a database transaction per request; `postgres` defaults give a 30 s connect timeout. Acceptable for an MVP; no cloud database exists yet.
 
 **Import exception.** `src/app/api/health/db/route.ts` is the single file in `app` allowed to import `@/db` (`withAnonymousRls`). The T-37 lint rule must allow exactly that path and T-38 must test that another `app` file importing `@/db` is reported.
@@ -98,7 +98,7 @@ Reviewed against the code and the running stack (Supabase CLI 3.1.0, Postgres 17
 ## Open issues
 1. ~~No statement or idle-in-transaction timeout for `app_backend`.~~ Resolved in FND-T-50: `alter role app_backend set statement_timeout = '8s'` and `idle_in_transaction_session_timeout = '10s'` (catalog `pg_roles.rolconfig`), verified inside `withRls` directly and through the local Supavisor transaction pooler (`pg_sleep(10)` cancelled with 57014). The catalog test belongs to FND-T-51.
 2. ~~Function default privileges.~~ Resolved in FND-T-50 (see Residual risks).
-3. No test asserts that `anon` has no table/sequence privileges in `public`. Recommended small tester task.
+3. ~~No test asserts that `anon` has no table/sequence privileges in `public`.~~ Resolved in FND-T-51: `tests/db/hardening-catalog.test.ts` scans the real `public` schema for any `anon` privilege (with a granted control table proving the scan is not vacuous) and pins the known `supabase_admin` residual case.
 
 ## References
 - Drizzle RLS (token example decodes only; `createDrizzle` is an external example): https://orm.drizzle.team/docs/rls (checked 2026-11-12)
