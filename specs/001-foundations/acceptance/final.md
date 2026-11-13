@@ -4,7 +4,7 @@ Acceptor: product-manager. Date: 2026-11-13. This file supersedes the "pending P
 
 ## Verdict
 
-**Epic 001 is Done, with one Product Owner confirmation pending.** Definition of Done items 1-8 and 10 were met in final-local.md. Item 9 is now met with evidence (below), except one sub-check that cannot be verified without a Vercel token: that the Vercel project has no database or service-role environment variables. No requirement is "not met". No scope creep found.
+**Epic 001 is Done.** The Product Owner confirmed on 2026-11-13 that the Vercel dashboard has no environment variables, so the last conditional sub-check is closed. Definition of Done items 1-8 and 10 were met in final-local.md. Item 9 is now met with evidence (below), including the sub-check that the Vercel project has no database or service-role environment variables, which the Product Owner confirmed in the dashboard. No requirement is "not met". No scope creep found.
 
 ## Method and limits
 
@@ -41,7 +41,7 @@ Items 1-8 and 10: unchanged, Met (final-local.md).
 
 ## Conditional (needs the Product Owner)
 
-- In the Vercel dashboard (Project > Settings > Environment Variables) confirm there are no `DATABASE_*`, `SUPABASE_SERVICE_ROLE_KEY` or `DATABASE_MIGRATION_URL` entries. If any exist, delete them and tell the team. This is the only thing standing between "Done, with one PO confirmation pending" and plain "Done".
+- Closed: the Product Owner confirmed in the Vercel dashboard (Project > Settings > Environment Variables) that there are no environment variables, so no `DATABASE_*`, `SUPABASE_SERVICE_ROLE_KEY` or `DATABASE_MIGRATION_URL` entries exist.
 
 ## Decisions already taken by the PO
 
