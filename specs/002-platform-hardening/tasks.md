@@ -22,7 +22,7 @@
 | PH-T-02 | Structured logger | developer | 1 | T-01 | done |
 | PH-T-03 | `no-console` lint rule and health route on the logger | developer | 1 | T-02 | done |
 | PH-T-04 | Typed errors and `Result` | developer | 1 | T-01 | done |
-| PH-T-05 | `fromDbError` database error mapping | developer | 1 | T-04 | todo |
+| PH-T-05 | `fromDbError` database error mapping | developer | 1 | T-04 | done |
 | PH-T-06 | Fault injection seam and `/design/errors` gate | developer | 1 | T-04 | todo |
 | PH-T-07 | Fault route fixtures | developer | 1 | T-06 | todo |
 | PH-T-08 | `StatusPage` component, listed on `/design` | developer | 1 | T-01 | todo |
