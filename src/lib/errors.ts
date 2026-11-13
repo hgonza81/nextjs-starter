@@ -7,7 +7,10 @@
 export type AppErrorType =
   "validation" | "not_found" | "forbidden" | "conflict" | "unexpected";
 
-/** Field name to messages, the shape produced by `z.flattenError(...).fieldErrors`. */
+/**
+ * Field name to messages. `defineAction` groups Zod issues by their first path
+ * segment; form-level issues use the reserved key `_form` (ADR 0015).
+ */
 export type FieldErrors = Readonly<Record<string, readonly string[]>>;
 
 /**
