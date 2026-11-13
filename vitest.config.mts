@@ -26,11 +26,11 @@ export default defineConfig({
     },
     projects: [
       {
-        // Unit layer: colocated tests, no Docker, no database.
+        // Unit layer: colocated tests plus lint-rule tests, no Docker, no database.
         extends: true,
         test: {
           name: "unit",
-          include: ["src/**/*.test.{ts,tsx}"],
+          include: ["src/**/*.test.{ts,tsx}", "tests/lint/**/*.test.ts"],
           // Component tests opt into jsdom with a `// @vitest-environment jsdom`
           // docblock; everything else stays on node.
           environment: "node",

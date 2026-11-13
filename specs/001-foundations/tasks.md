@@ -65,7 +65,7 @@
 | FND-T-35 | Accept step 7 | product-manager | 7 | T-34, T-58, T-59, T-60 | done |
 | FND-T-36 | Conventions in `docs/architecture.md` | architect | 8 | T-02 | done |
 | FND-T-37 | Boundary lint rules | developer | 8 | T-36, T-35 | done |
-| FND-T-38 | Boundary rule tests (fixtures) | tester | 8 | T-37 | todo |
+| FND-T-38 | Boundary rule tests (fixtures) | tester | 8 | T-37 | done |
 | FND-T-39 | Accept step 8 | product-manager | 8 | T-38 | todo |
 | FND-T-40 | Test README | tester | 9 | T-39 | todo |
 | FND-T-41 | Project README | developer | 9 | T-39 | todo (Independent of T-40) |
