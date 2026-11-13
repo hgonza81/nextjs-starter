@@ -21,7 +21,7 @@ export default defineConfig({
       provider: "v8",
       // Report only, no threshold (FND-FR-19). Generated schema is excluded.
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/db/schema/**"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/db/schema/**"],
       reporter: ["text", "html"],
     },
     projects: [
@@ -30,7 +30,9 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["src/**/*.test.ts"],
+          include: ["src/**/*.test.{ts,tsx}"],
+          // Component tests opt into jsdom with a `// @vitest-environment jsdom`
+          // docblock; everything else stays on node.
           environment: "node",
         },
       },
