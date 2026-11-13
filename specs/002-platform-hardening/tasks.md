@@ -27,7 +27,7 @@
 | PH-T-07 | Fault route fixtures | developer | 1 | T-06 | done |
 | PH-T-08 | `StatusPage` component, listed on `/design` | developer | 1 | T-01 | done |
 | PH-T-09 | Design system doc: `StatusPage` | ui-ux-designer | 1 | T-08 | done |
-| PH-T-10 | 500, global error and 404 pages | developer | 1 | T-08, T-04, T-07 | todo |
+| PH-T-10 | 500, global error and 404 pages | developer | 1 | T-08, T-04, T-07 | done |
 | PH-T-11 | `onRequestError` hook | developer | 1 | T-02, T-04, T-07 | todo |
 | PH-T-12 | `defineAction` wrapper | developer | 1 | T-02, T-04, T-05, T-07 | todo |
 | PH-T-13 | E2E harness: server wrapper with log tee, ports, config | tester | 1 | T-07, T-10 | todo |
