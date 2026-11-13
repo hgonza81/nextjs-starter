@@ -372,6 +372,34 @@ Mutation record (each applied temporarily, `pnpm test:e2e` run, restored with
 | inline script that adds a `dark` class added to the root layout       | 1 red (server HTML has no theme script or class)                    |
 | hamburger `aria-label` changed to "Menu"                              | 5 red (drawer tests)                                                |
 
+## E2E: stable "all 18 layout iframes load" check (FND-T-60)
+
+`loadAllDesignFrames` (`tests/e2e/helpers/design-page.ts`) is used by the two
+`/design` axe tests (1280 and 375 px, light and dark OS mode).
+
+Root cause of the flakiness (reproduced: 8 of 40 runs failed with 4 to 8
+workers): the 18 iframes on `/design` are `loading="lazy"`, and the old helper
+only set `frame.loading = "eager"` from the test. In Chromium that does not
+reliably start the deferred navigations: some frames stayed on their initial
+`about:blank` document (`readyState` "complete", 0 children) for 13 s or more
+while the others loaded, so the 5 s poll expired. It is not a page defect (lazy
+loading is intended for real users) and not related to the second server.
+
+Fix: the helper re-assigns each frame's `src` (a real navigation), then polls
+for up to 20 s until every frame has `readyState` "complete", the expected
+path, a `Design: ... frame` document title (so a 404 page does not count) and
+content. On failure the message lists the `src` and the real URL of each frame
+that did not load. No retries were added.
+
+Mutation record (applied temporarily, restored with
+`git checkout src/app/design/_lib/frames.ts`, never committed): `frameHref`
+returned `/design/frames/missing` for the `loading` frame.
+
+| Mutation                                        | Result                                                                                                          |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| One frame slug points to a 404 route            | Both `all 18 frames loaded` tests red, naming the 6 `/design/frames/missing?theme=...` frames that did not load |
+| Same mutation with the first version of the fix | Survived (a 404 page has a body and its own path); this is why the title landmark was added                     |
+
 ## When the stack is down
 
 `pnpm test:db` fails immediately, before any test, with a message naming the
