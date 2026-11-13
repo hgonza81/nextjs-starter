@@ -20,6 +20,8 @@ Each big block of functionality (an "epic") lives in its own numbered folder. Ep
 
 ## How we work (per epic)
 
+**Screen steps only for epics with functional screens.** Steps 3, 4 and 7 (wireframes, guided walkthrough, Figma) apply only when the epic delivers screens with functionality (forms, flows, dashboards). An epic with no UI, or only trivial pages (for example an error page), skips them: the `ui-ux-designer` adds a short ASCII sketch to its round 1 review or to the spec, and the orchestrator states in chat that the steps were skipped. The Product Owner can always ask for them.
+
 Two control levels: **✋ checkpoints** are decisions that belong to the Product Owner; the orchestrator never advances past them without explicit approval. **Automatic steps** are chained by the orchestrator without asking, and reported afterwards. The process is not strictly linear: if feedback changes scope, flows or screens, go back to the affected step and re-do only what changed.
 
 ```
