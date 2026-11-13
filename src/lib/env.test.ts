@@ -108,7 +108,11 @@ describe("server env (src/lib/env.server.ts)", () => {
 
     const { serverEnv } = await loadServer();
 
-    expect(serverEnv).toEqual({ NODE_ENV: "test", ...validServer });
+    expect(serverEnv).toEqual({
+      NODE_ENV: "test",
+      ...validServer,
+      DESIGN_PAGE_ENABLED: false,
+    });
   });
 
   it.each(["development", "test"])(
@@ -154,6 +158,32 @@ describe("server env (src/lib/env.server.ts)", () => {
     stubAll({}, "staging");
 
     await expect(loadServer()).rejects.toThrow(/NODE_ENV/);
+  });
+
+  it.each([
+    ["development", undefined, true],
+    ["test", undefined, false],
+    ["production", undefined, false],
+    ["production", "", false],
+    ["production", "true", true],
+    ["production", "1", true],
+    ["development", "false", false],
+    ["development", "0", false],
+  ])(
+    "FND-FR-17: in %s, DESIGN_PAGE_ENABLED=%j resolves to %s",
+    async (nodeEnv, value, expected) => {
+      stubAll({ DESIGN_PAGE_ENABLED: value }, nodeEnv);
+
+      const { serverEnv } = await loadServer();
+
+      expect(serverEnv.DESIGN_PAGE_ENABLED).toBe(expected);
+    },
+  );
+
+  it("FND-FR-17: rejects an unrecognised DESIGN_PAGE_ENABLED value naming it", async () => {
+    stubAll({ DESIGN_PAGE_ENABLED: "yes" }, "production");
+
+    await expect(loadServer()).rejects.toThrow(/DESIGN_PAGE_ENABLED/);
   });
 
   it("FND-FR-03: requireDatabaseUrl returns the configured URL", async () => {
