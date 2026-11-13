@@ -30,7 +30,7 @@
 | PH-T-10 | 500, global error and 404 pages | developer | 1 | T-08, T-04, T-07 | done |
 | PH-T-11 | `onRequestError` hook | developer | 1 | T-02, T-04, T-07 | done |
 | PH-T-12 | `defineAction` wrapper | developer | 1 | T-02, T-04, T-05, T-07 | done |
-| PH-T-13 | E2E harness: server wrapper with log tee, ports, config | tester | 1 | T-07, T-10 | todo |
+| PH-T-13 | E2E harness: server wrapper with log tee, ports, config | tester | 1 | T-07, T-10 | done |
 | PH-T-14 | Tests: logger (incl. trace id) and no-console | tester | 1 | T-03 | todo |
 | PH-T-15 | Tests: errors and database mapping | tester | 1 | T-05 | todo |
 | PH-T-16 | Tests: `defineAction` | tester | 1 | T-12 | todo |
