@@ -28,6 +28,17 @@ Option 1.
 - **Spikes:** Drizzle error `cause` shape against the real database (a `test:db` case); a `"use server"` file exporting `defineAction(...)` results is accepted by the Next build (it checks that exports are async functions); `onRequestError` not firing for `redirect()`/`notFound()`; whether `global-error` receives the nonce (ADR 0014).
 - Updates convention C6 with the concrete type. Revisit when authenticated actions are added in epic 003.
 
+## Spike outcome
+Run 2026-11-13 under PH-T-01 (Next.js 16.4.6, Postgres 17 local, real `app_backend` role). All five assumptions hold; no design change.
+
+1. **Drizzle `cause` shape: confirmed.** Every failure is a `DrizzleQueryError` (no `code`) whose `.cause` is the driver `PostgresError` carrying the SQLSTATE: `23505` unique, `23503` foreign key, `23502` not null, `23514` check, `42501` permission denied (all at depth 1). Evidence: a throwaway `node` script against `postgresql://app_backend@127.0.0.1:54322` printing the `cause` chain. Consequence: `fromDbError` walking up to 3 levels is sufficient. `DrizzleQueryError.message` contains the SQL text and parameters, so it must never be shown or logged as-is (reinforces "no database message to users" and the logger's errors-reduced-to-name-and-code rule).
+2. **`"use server"` file exporting a `defineAction(...)`-style result: confirmed, no workaround.** A `"use server"` file with `export const x = makeAsyncFn()` built with `pnpm build`, appeared in `server-reference-manifest.json`, and a direct POST with the `Next-Action` header to `pnpm start` returned HTTP 200 and the expected result. Consequence: modules can `export const myAction = defineAction(...)` from `"use server"` files.
+3. **`onRequestError` does not fire for `redirect()`/`notFound()`: confirmed.** With a logging hook on `build` + `start`, `/spike/redirect` (307) and `/spike/notfound` (404) logged nothing, while `/spike/throw` logged exactly one hook line (`routeType=render`). Consequence: the hook needs no filter for control-flow signals (`unstable_rethrow` in the wrapper is a separate path and stays).
+4. **HTTP 500 under `connection()` in the root layout: confirmed.** With `await connection()` in the root layout and a page that throws before streaming, `curl -w "%{http_code}"` against `pnpm start` returned `500`, not 200. Consequence: status-code assertions are valid in production mode.
+5. **`error.digest` in production: confirmed.** The thrown server error got a digest (`3849511219`), visible in the server log, in the `onRequestError` argument (`err.digest`) and in the RSC payload sent to the client. Consequence: the hook can use `digest` as `ref`, matching what error pages show.
+
+All throwaway code was removed; only this section is committed.
+
 ## References
 - `node_modules/next/dist/docs/01-app/03-api-reference/04-functions/unstable_rethrow.md`
 - `.../03-file-conventions/error.md` (digest), `instrumentation.md` (`onRequestError`)
