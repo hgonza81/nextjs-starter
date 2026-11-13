@@ -224,6 +224,42 @@ restored; nothing is committed):
 | real function in `public` granted EXECUTE to `anon`              | no real function executable by anon (1)                            |
 | Data API enabled (`[api] enabled = true`, stack restarted)       | `/rest/v1/` test (1; the status becomes 200)                       |
 
+## `/api/health/db` and Data API config tests (FND-T-53)
+
+Files (unit project, no Docker): `src/app/api/health/db/route.test.ts` and
+`src/app/api/health/db/data-api-config.test.ts`.
+
+- Route: `@/db` is replaced by a fake `withAnonymousRls`. It checks 200
+  `{"status":"ok","role":"anon"}`, 503 `{"status":"unavailable"}` for an `Error`
+  and for a non-`Error` throw, `force-dynamic`, and that a thrown error carrying
+  `postgresql://app_backend:secret@db.example.com:6543/postgres` (in message and
+  stack) leaks none of the URL, scheme, user, password, host or port, neither in
+  the response body nor in anything written through `console.*` (logged
+  arguments are serialized with `util.inspect`, because `JSON.stringify` drops
+  `Error` messages). A failure must still be logged (so silence is not a pass).
+- Config: `supabase/config.toml` has `enabled = false` inside `[api]`. The
+  parser is section-aware (other sections, `[api.tls]`, comments), with its own
+  self-checks. The HTTP check in `hardening-catalog.test.ts` stays: this one
+  needs no stack, that one proves the running stack agrees.
+
+Mutation record (applied temporarily, `src/app/api/health/db` run, restored with
+`git checkout`; nothing is committed):
+
+| Mutation                                            | Result                                    |
+| --------------------------------------------------- | ----------------------------------------- |
+| 503 body also returns `error.message`               | 8 red (every body leak case)              |
+| route logs the whole `error` object                 | 7 red (log leak cases)                    |
+| route logs `error.message`                          | 6 red                                     |
+| route no longer logs anything                       | 1 red (failure is still logged)           |
+| 503 changed to 500                                  | 2 red                                     |
+| `role` taken from a constant instead of the query   | 1 red                                     |
+| `dynamic` changed to `auto`                         | 1 red                                     |
+| `[api] enabled = true`                              | 1 red                                     |
+| `enabled = false` moved to another section (`[zz]`) | 1 red (a different section does not pass) |
+
+First draft lesson: the log check used `JSON.stringify`, so logging the raw
+`Error` object survived (1 red instead of 7); it now uses `util.inspect`.
+
 ## E2E (FND-T-17)
 
 Files: `playwright.config.ts` (root), `tests/e2e/home.spec.ts` (heading, HTTP 200,
