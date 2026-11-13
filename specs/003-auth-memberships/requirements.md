@@ -1,7 +1,7 @@
-# 002 — Auth and Memberships: requirements
+# 003 — Auth and Memberships: requirements (renumbered from 002)
 
 Stage: **1. Requirements** (first draft written before the review-round process existed; it contains more detail than high-level requirements and will be re-reviewed by all agents, then rewritten as `spec.md`).
-Depends on: 001-foundations. Note: **Supabase Auth** (setup and client wiring) belongs to this epic, not to foundations.
+Depends on: 001-foundations and 002-platform-hardening. Note: **Supabase Auth** (setup and client wiring) belongs to this epic, not to foundations.
 
 ## 1. Goal
 
