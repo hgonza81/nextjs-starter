@@ -256,13 +256,19 @@ jobs:
       # exists.
       # `--reporter=silent` keeps pnpm output off stdout: the CLI prints only
       # the deployment URL there.
+      #
+      # VERCEL_ORG_ID and VERCEL_PROJECT_ID are deliberately NOT set here
+      # (FND-T-57). `vercel pull` already wrote them, plus the project name,
+      # to .vercel/project.json. With that file the CLI 65.15.0 deploy skips
+      # its remote owner lookup. With the two env vars it does the lookup
+      # (the org id must match the token's user or a team it can read, which
+      # `pull` never checks) and fails with "Project not found" when it does
+      # not.
       - name: Deploy prebuilt output
         id: deploy
         if: steps.preflight.outputs.ready == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           url="$(pnpm --reporter=silent dlx "vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod \
             --env "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}" \
