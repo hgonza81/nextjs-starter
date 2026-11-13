@@ -1,0 +1,24 @@
+# Gitleaks configuration (FND-FR-24). Extends the default ruleset; the only
+# exception is the public demo key below.
+title = "nextjs-starter gitleaks config"
+
+[extend]
+useDefault = true
+
+# G4 (FND-T-19): tests/db/hardening-catalog.test.ts contains the JWT that every
+# local Supabase stack ships as its demo anon key (issuer "supabase-demo", role
+# "anon"). It is public, identical on every machine and grants nothing outside
+# a local stack. The literal is already in git history, which cannot be
+# rewritten, so removing it from the tree would not make the history scan pass.
+# The exception is attached to the `jwt` rule only and scoped to this exact file
+# AND this exact token: any other JWT, in this file or elsewhere, and every
+# other rule in this file, is still reported. (A top-level [[allowlists]] with a
+# path would skip the whole file for all rules, so it is not used.)
+[[rules]]
+id = "jwt"
+
+[[rules.allowlists]]
+description = "Public local Supabase demo anon key used by the hardening catalog test"
+condition = "AND"
+paths = ['''(^|/)tests/db/hardening-catalog\.test\.ts$''']
+regexes = ['''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9\.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0''']

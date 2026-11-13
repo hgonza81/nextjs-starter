@@ -3,11 +3,10 @@
 # green CI run.
 #
 # Single working branch (main): the workflow runs on every push, no
-# pull_request trigger. The security jobs (secret scan, audit) and the deploy
-# job are added by FND-T-22 and FND-T-24.
+# pull_request trigger. The deploy job is added by FND-T-24.
 #
 # Action versions are pinned to full commit SHAs (the comment names the
-# release). Dependabot (FND-T-22) keeps them current.
+# release). Dependabot (.github/dependabot.yml) keeps them current.
 name: CI
 
 on: push
@@ -49,6 +48,55 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test
       - run: pnpm build
+
+  # FND-FR-24: secret scan over the full history. BLOCKING. Uses the Gitleaks
+  # binary (the gitleaks-action needs a license for organization accounts).
+  # Rules and the single allowlist entry live in .gitleaks.toml. A secret that
+  # reaches this job is already pushed: rotate it, removing it is not enough.
+  secret-scan:
+    name: Secret scan (blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Verified against the official checksums file of the release, which is
+      # pinned here so a tampered download or release asset fails the job.
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history: a secret removed in a later commit is still leaked.
+          fetch-depth: 0
+      - name: Install Gitleaks
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "${RUNNER_TEMP}/${archive}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${archive}" | sha256sum --check -
+          mkdir "${RUNNER_TEMP}/gitleaks"
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}/gitleaks" gitleaks
+      # Exits non-zero when a leak is found. --redact keeps the secret out of
+      # the public job log.
+      - name: Scan the full git history
+        run: >-
+          "${RUNNER_TEMP}/gitleaks/gitleaks" detect --source . --log-opts=--all
+          --redact --verbose
+
+  # FND-FR-24: dependency audit. INFORMATIONAL: findings are shown in the log
+  # but never fail the run (continue-on-error). Decide on findings by hand.
+  audit:
+    name: Dependency audit (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      # Reads the lockfile; no install needed. Exits 1 when it finds anything.
+      - run: pnpm audit
 
   # Group 2: Docker and local Supabase. BLOCKING. Independent of the fast job
   # (no `needs`) so both report in parallel.
