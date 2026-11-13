@@ -264,9 +264,9 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           url="$(pnpm --reporter=silent dlx "vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod \
-            -e "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}" \
-            -e "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
-            -e "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}")"
+            --env "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}" \
+            --env "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
+            --env "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}")"
           case "${url}" in
             https://*) ;;
             *) echo "::error::Unexpected deploy output, expected a URL."; exit 1 ;;
