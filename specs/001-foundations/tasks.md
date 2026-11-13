@@ -71,10 +71,10 @@
 | FND-T-39 | Accept step 8 | product-manager | 8 | T-38, T-61 | done |
 | FND-T-40 | Test README | tester | 9 | T-39 | done |
 | FND-T-41 | Project README | developer | 9 | T-39 | done (Independent of T-40) |
-| FND-T-42 | Onboarding dry run | tester | 9 | T-40, T-41 | todo |
+| FND-T-42 | Onboarding dry run | tester | 9 | T-40, T-41 | done |
 | FND-T-63 | README clarity fixes from the onboarding dry run (T-42) | developer | 9 | T-42 | done |
 | FND-T-43 | Final architect check: ADRs, architecture, conventions | architect | 9 | T-42 | done |
-| FND-T-44 | Final acceptance, local part (DoD 1-8, 10) | product-manager | 9 | T-43 | todo |
+| FND-T-44 | Final acceptance, local part (DoD 1-8, 10) | product-manager | 9 | T-43 | done (see acceptance/final-local.md) |
 | FND-T-56 | Vercel framework preset in `vercel.json` and ci.yml leftovers (first real deploy failed at Build) | developer | 6 | T-27 | done |
 | FND-T-57 | Fix `vercel deploy` "Project not found" (second real deploy attempt) | developer | 6 | T-56 | done |
 | FND-T-45 | First CI run is green (pending PO push) | tester | 9 | T-44, PO push | todo |

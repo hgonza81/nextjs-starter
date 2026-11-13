@@ -4,7 +4,7 @@ Each big block of functionality (an "epic") lives in its own numbered folder. Ep
 
 | # | Epic | Summary | Status |
 |---|------|---------|--------|
-| 001 | [foundations](001-foundations/requirements.md) | Basic Next.js skeleton, Supabase database + CLI, Docker, frontend stack and design system, testing, CI/CD and security checks. Many decisions still open. | High-level requirements |
+| 001 | [foundations](001-foundations/requirements.md) | Basic Next.js skeleton, Supabase database + CLI, Docker, frontend stack and design system, testing, CI/CD and security checks. Many decisions still open. | Done pending PO push (see [final-local acceptance](001-foundations/acceptance/final-local.md)) |
 | 002 | [auth-memberships](002-auth-memberships/requirements.md) | Sign-up, login, empty dashboard, tenants and memberships | High-level requirements (to be re-reviewed) |
 
 ## Roles
