@@ -249,10 +249,11 @@ jobs:
         run: pnpm dlx "vercel@${VERCEL_CLI_VERSION}" build --prod
 
       # Runtime: src/instrumentation.ts and next.config.ts validate the public
-      # env when the server starts, so the same values are passed with -e. This
-      # needs no action in the Vercel dashboard. NEXT_PUBLIC_APP_URL cannot be
-      # the final deployment URL at build time, so the placeholder stays; the
-      # real values replace these when a cloud Supabase project exists.
+      # env when the server starts, so the same values are passed with --env.
+      # This needs no action in the Vercel dashboard. NEXT_PUBLIC_APP_URL
+      # cannot be the final deployment URL at build time, so the placeholder
+      # stays; the real values replace these when a cloud Supabase project
+      # exists.
       # `--reporter=silent` keeps pnpm output off stdout: the CLI prints only
       # the deployment URL there.
       - name: Deploy prebuilt output
@@ -295,8 +296,10 @@ jobs:
               echo "Health check passed on attempt ${attempt}." >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
-            echo "Attempt ${attempt} failed, retrying."
-            sleep 5
+            echo "Attempt ${attempt} failed."
+            if [ "${attempt}" -lt 5 ]; then
+              sleep 5
+            fi
           done
           echo "::error::Health check failed: ${DEPLOYMENT_URL}/api/health did not return 200 with the known body."
           exit 1
