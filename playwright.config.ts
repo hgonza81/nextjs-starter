@@ -17,15 +17,38 @@ const localBaseUrl = `http://localhost:${port}`;
 // started without DESIGN_PAGE_ENABLED.
 const gateOffPort = port + 1;
 const gateOffBaseUrl = `http://localhost:${gateOffPort}`;
+// Telemetry servers (PH-FR-12): +2 exports to the OTLP receiver (+10), +3 to a
+// closed port (+11). Same build, started without a rebuild.
+const telemetryOnPort = port + 2;
+const telemetryClosedPort = port + 3;
+const receiverPort = port + 10;
+const closedPort = port + 11;
+// http/json for the plain Node receiver (the SDK default is http/protobuf);
+// 100 ms batch delays so exports happen within the test window.
+const telemetryEnv = (endpointPort: number, serviceName: string) => ({
+  ...inheritedEnv,
+  ...publicEnv,
+  // The fault fixtures (a failing route, which logs) need the flag on.
+  DESIGN_PAGE_ENABLED: "true",
+  OTEL_EXPORTER_OTLP_ENDPOINT: `http://127.0.0.1:${endpointPort}`,
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
+  OTEL_SERVICE_NAME: serviceName,
+  OTEL_BSP_SCHEDULE_DELAY: "100",
+  OTEL_BLRP_SCHEDULE_DELAY: "100",
+});
 
 // The deployed app has no database (ADR 0004), so the E2E server gets none:
 // database variables are removed even if they are set in the caller's shell.
 // Only the three public variables are provided (same values as .env.example).
+// Telemetry settings are removed too, so only the servers that set them on
+// purpose export anything (PH-AC-20 needs a main server with no endpoint).
 const databaseVariables = ["DATABASE_URL", "DATABASE_MIGRATION_URL"];
 const inheritedEnv = Object.fromEntries(
   Object.entries(process.env).filter(
     (entry): entry is [string, string] =>
-      entry[1] !== undefined && !databaseVariables.includes(entry[0]),
+      entry[1] !== undefined &&
+      !databaseVariables.includes(entry[0]) &&
+      !entry[0].startsWith("OTEL_"),
   ),
 );
 // The flag-off server must see the flag unset, even if the caller exported it.
@@ -48,6 +71,9 @@ export default defineConfig({
   testDir: "./tests/e2e",
   testMatch: "**/*.spec.ts",
   fullyParallel: true,
+  // The OTLP receiver for the telemetry specs; there are no local servers (and
+  // no telemetry specs) in E2E_BASE_URL mode.
+  globalSetup: externalBaseUrl ? undefined : "./tests/e2e/global-setup.ts",
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI
@@ -109,6 +135,22 @@ export default defineConfig({
           timeout: 60_000,
           stdout: "pipe",
           env: { ...envWithoutDesignFlag, ...publicEnv },
+        },
+        {
+          command: `node scripts/e2e-server.mts ${telemetryOnPort}`,
+          url: `http://localhost:${telemetryOnPort}/api/health`,
+          reuseExistingServer: false,
+          timeout: 60_000,
+          stdout: "pipe",
+          env: telemetryEnv(receiverPort, "e2e-telemetry-on"),
+        },
+        {
+          command: `node scripts/e2e-server.mts ${telemetryClosedPort}`,
+          url: `http://localhost:${telemetryClosedPort}/api/health`,
+          reuseExistingServer: false,
+          timeout: 60_000,
+          stdout: "pipe",
+          env: telemetryEnv(closedPort, "e2e-telemetry-closed"),
         },
       ],
 });
