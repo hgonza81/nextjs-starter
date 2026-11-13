@@ -29,7 +29,41 @@ Modules `auth`, `users`, `tenants` arrive in epic 002.
 - Environment access only through `src/lib/env.ts` (public) and `src/lib/env.server.ts` (server-only), validated at startup by `src/instrumentation.ts`; `next.config.ts` imports the public env so a build fails on missing `NEXT_PUBLIC_*` variables, which are therefore also needed by `next start` (ADR 0004).
 
 ## Conventions
-kebab-case files; named exports; `@/` alias; Server Components by default; mutations via Server Actions returning `{ ok: true, data } | { ok: false, error }`; Zod validation at every boundary; structured server error logging without PII or secrets; Conventional Commits (documented, not enforced).
+Each convention is one line of "what" plus "why"; the lint column of the table in "Lint rules" says which are enforced. ADRs: [0001 structure and layering](adr/0001-code-structure-and-layering.md), [0002 Supabase local-first and migrations](adr/0002-supabase-local-first-and-migrations.md), [0003 Drizzle and RLS data access](adr/0003-drizzle-rls-data-access.md), [0004 env and secrets](adr/0004-env-and-secrets.md), [0005 tenant isolation direction](adr/0005-tenant-isolation-direction.md).
+
+| # | Convention | Detail |
+|---|------------|--------|
+| C1 | Layout | `src/app` (routing only, thin), `src/modules/<name>/{actions,queries,schemas,components}` plus `index.ts` (public API) and `types.ts`, `src/db` (shared, generated schema, `withRls`), `src/lib` (domain-free). Only create folders that have content; no empty module folders. Modules `auth`, `users`, `tenants` arrive in epic 002. |
+| C2 | kebab-case files | All file and folder names are kebab-case (`user-menu.tsx`, `create-tenant.ts`). Next.js reserved names (`page.tsx`, `route.ts`) are unchanged. Identifiers follow TypeScript norms (PascalCase components and types, camelCase functions). |
+| C3 | Named exports | No `export default` in our code. Exceptions are files Next.js requires to be default (`page`, `layout`, `loading`, `error`, `not-found`, config files). `index.ts` of a module re-exports its public API by name. |
+| C4 | `@/` alias | Cross-folder imports use `@/` (maps to `src/`). Inside one module, use relative imports for the module's own files. No `../../..` chains that leave a module or top-level folder. |
+| C5 | Server Components by default | Add `"use client"` only for interactivity or browser APIs, at the smallest leaf possible. Client code may import only `publicEnv` (never `env.server.ts`), and never anything from `@/db`. |
+| C6 | Mutations via Server Actions with a typed result | Actions live in `modules/<name>/actions/` and return `{ ok: true, data } | { ok: false, error }`; expected failures are returned, not thrown. An action re-checks the session with `supabase.auth.getUser()` and never relies on the UI or middleware. |
+| C7 | Zod at the boundary | Every external input (form data, action arguments, route handler body, query params) is parsed with a Zod schema from `modules/<name>/schemas/` before use; the parsed type is the only type passed on. Env is validated by `env.ts` / `env.server.ts` (ADR 0004). |
+| C8 | Error logging without PII | Server-side, structured (`console.error` with a plain object: event name, error code or message, ids only). Never log secrets, tokens, passwords, emails, request bodies or full error objects that may embed them. No observability tooling in the MVP; the single log call site is the seam. |
+| C9 | All queries use the `withRls` transaction | A query function in `queries/` receives the transaction handle passed by `withRls(ctx, fn)` (or `withAnonymousRls(fn)`) and uses only it. The raw client (`src/db/client.ts`) is private to `src/db`; never nest `withRls`, never use `sql.raw` outside `src/db/rls.ts`, never build SQL from request input (ADR 0003). The context passed in must come from a verified session. |
+| C10 | One data path | `supabase-js` and `@supabase/ssr` are for Auth only (clients live in `src/lib/supabase/`); data goes through Drizzle. The Data API is disabled as a backstop (ADR 0003). |
+| C11 | Env access | Only `src/lib/env.ts` (public) and `src/lib/env.server.ts` (`server-only`) read `process.env`, plus the single `NEXT_RUNTIME` read in `src/instrumentation.ts` (edge runtime must not load `server-only`). Tooling outside the app (drizzle config, scripts, Playwright/Vitest config, `tests/utils`) is exempt (ADR 0004). |
+| C12 | Commits | Conventional Commits, documented, not enforced. |
+
+## Lint rules
+Each FR-12 rule is an ESLint check in `pnpm lint` (and CI). Each has a deliberately illegal fixture in the unit test layer (FND-T-38) plus a legal counterpart.
+
+| FR-12 | Rule | Convention / ADR | ESLint mechanism | Allowed exceptions |
+|-------|------|------------------|------------------|--------------------|
+| (a) | Other code imports a module only through its `index.ts` | Dependency direction; C1, C4; ADR 0001 rule 1 | `no-restricted-imports` pattern `@/modules/*/**` (and relative equivalents leaving a module) in every file | Files inside the same module use relative paths to their own internals. Public entry is `@/modules/<name>` |
+| (b) | `src/lib` does not import `src/modules` | Dependency direction; ADR 0001 rule 2 | Flat-config override `files: ["src/lib/**"]` with `no-restricted-imports` on `@/modules/**`, `@/db/**`, `@/db` | none |
+| (c) | `src/db` does not import `src/modules`; `app` and UI components do not import `@/db` | Dependency direction, C5, C9; ADR 0001 rules 2-3 | Override `files: ["src/db/**"]` forbidding `@/modules/**`; override `files: ["src/app/**", "src/components/**", "src/hooks/**"]` forbidding `@/db` and `@/db/*` | **Documented exception: `src/app/api/health/db/route.ts`** (calls `withAnonymousRls`, no module exists to call in epic 001). Exactly that path, via a later override that turns the rule off for that one file. Also exempt: `src/modules/**` (may import `@/db`) |
+| (d) | Raw DB client importable only inside `src/db` | C9; ADR 0003 | `no-restricted-imports` on `@/db/*` (covers `client`, `rls`, `schema`) and relative `**/db/client` outside `src/db/**`; modules use `@/db` only | `tests/**` (DB tests import `@/db/client` to prove denial without `withRls`) |
+| (e) | No import cycles | ADR 0001 rule 4 | `import/no-cycle` (`eslint-plugin-import`, already registered by `eslint-config-next`; do not add `dependency-cruiser`) | none |
+| (f) | `.from()` and `.rpc()` data calls restricted | C10; ADR 0003 | `no-restricted-syntax` with selectors `CallExpression[callee.property.name='rpc']` and `CallExpression[callee.property.name='from'][arguments.0.type='Literal']`. Drizzle also has `.from(table)` taking an identifier, so only the string-literal form (supabase-js `.from("table")`) is banned | `tests/**` if a test needs it. The disabled Data API is the backstop for dynamic forms the selector cannot see |
+
+Extra checks derived from the ADRs, same mechanism, same fixtures approach:
+- `sql.raw` allowed only in `src/db/rls.ts` (`no-restricted-syntax`, ADR 0003).
+- `process.env` allowed only in `src/lib/env.ts`, `src/lib/env.server.ts` and the `NEXT_RUNTIME` read in `src/instrumentation.ts` (`no-restricted-properties` on `process.env`; ADR 0004 amendment). Tooling and `tests/**` are exempt (C11). If this proves awkward, the developer may report it back rather than weaken rules (a) to (f).
+- Generated `src/db/schema/schema.ts` and `relations.ts` are excluded from lint and Prettier.
+
+**Tool choices (ADR 0001 left them open).** No new dependency: `eslint` 9 flat config in `eslint.config.mjs` with the built-in `no-restricted-imports`, `no-restricted-syntax` and `no-restricted-properties`, one `files`-scoped override per rule, and `import/no-cycle` from the plugin `eslint-config-next` already provides (check the alias resolves `@/`; if not, set the `import/resolver` TypeScript setting). `eslint-plugin-boundaries` and `dependency-cruiser` are rejected: the folder rules are few and static, and they would add a dependency and a second config. Revisit if the number of modules makes path patterns unwieldy. Allowances for `env.server.ts` and `NEXT_RUNTIME` (rule 4 note above, ADR 0001 and 0004 amendments) are already recorded in both ADRs.
 
 ## CI/CD
 One workflow, `.github/workflows/ci.yml`, trigger `on: push` (no `pull_request`: fork PRs start nothing; Dependabot branches and tags run the checks but never deploy). Permissions are `contents: read`; actions are pinned by full commit SHA with the release in a comment (Dependabot bumps them). Runs use the same `pnpm` scripts as local development.
