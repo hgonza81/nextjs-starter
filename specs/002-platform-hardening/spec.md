@@ -50,6 +50,7 @@ Finish the technical foundations every module needs, so that from epic 003 on th
 | CodeQL and license scanning, date/currency utilities, basic SEO metadata | Not requested; parked |
 | Auth, users, tenants, memberships; authed action wrapper; `tenant_id` guard rule | Epic 003 (seams documented in ADRs) |
 | Table and Dialog components, shared error renderer component, "Copy" button on the reference code | Added by the first epic that needs them |
+| Flush of the last telemetry batch on SIGTERM (`sdk.shutdown()`); validation of per-signal `OTEL_*` variables and `OTEL_SDK_DISABLED` | Known first-cut limits found in the step 2 review; a module or the first production deployment can add them |
 | Database spans, custom metrics, runtime metrics | Framework spans only in the first cut (D3) |
 | Keyset pagination, filter operators beyond equality, text search | Per list, when a module needs them |
 | Soft delete, audit columns, security-event audit | Product decisions deferred (C1) |
