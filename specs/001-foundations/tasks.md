@@ -66,7 +66,8 @@
 | FND-T-36 | Conventions in `docs/architecture.md` | architect | 8 | T-02 | done |
 | FND-T-37 | Boundary lint rules | developer | 8 | T-36, T-35 | done |
 | FND-T-38 | Boundary rule tests (fixtures) | tester | 8 | T-37 | done |
-| FND-T-39 | Accept step 8 | product-manager | 8 | T-38 | todo |
+| FND-T-61 | Close the src/lib relative-import gap in the boundary lint (T-38 finding) | developer | 8 | T-38 | done |
+| FND-T-39 | Accept step 8 | product-manager | 8 | T-38, T-61 | todo |
 | FND-T-40 | Test README | tester | 9 | T-39 | todo |
 | FND-T-41 | Project README | developer | 9 | T-39 | todo (Independent of T-40) |
 | FND-T-42 | Onboarding dry run | tester | 9 | T-40, T-41 | todo |
@@ -526,6 +527,15 @@ Count by assignee: developer 17, tester 17, product-manager 8, architect 4, ui-u
 - **Read first:** spec 8.3, 13 (item 7); T-36 doc; T-38 test results.
 - **Acceptance:** every rule has a convention, a lint rule and a test.
 - **Output:** acceptance note in the reply.
+- **Dependencies:** FND-T-38, FND-T-61.
+
+### FND-T-61 Close the src/lib relative-import gap in the boundary lint
+- **Assignee:** developer
+- **Goal:** `src/lib` reports relative imports of the raw client (`../db/client`, `../db/rls`), not only the `@/db` alias (finding of T-38).
+- **Requirements:** FND-FR-12.
+- **Do:** add the `dbInternals` pattern group to the `src/lib` zone of `eslint.config.mjs`; turn the `it.todo` in `tests/lint/boundaries.test.ts` into passing tests (client and rls variants).
+- **Acceptance:** lint, typecheck, `pnpm test` and format check pass; no other rule touched.
+- **Output:** lint config and test. Commit scope `chore(lint)`, body `Task: FND-T-61`.
 - **Dependencies:** FND-T-38.
 
 ---

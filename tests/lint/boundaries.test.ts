@@ -246,10 +246,12 @@ describe("FND-FR-12 (d): the raw DB client is private to src/db", () => {
     expect(await lint("src/app/x/page.ts", code)).toContain(IMPORTS);
   });
 
-  // GAP (reported to the developer): the `src/lib` zone omits `dbInternals`,
-  // so `../db/client` from src/lib is not reported (only the alias is). Turn
-  // this into a normal test once the rule is fixed.
-  it.todo("reports a relative path to the raw client from src/lib");
+  it.each([
+    ["client", 'import { client } from "../db/client";'],
+    ["rls", 'import { withRls } from "../db/rls";'],
+  ])("reports a relative path to the raw %s from src/lib", async (_l, code) => {
+    expect(await lint("src/lib/other.ts", code)).toContain(IMPORTS);
+  });
 
   it("reports a module importing the raw client", async () => {
     expect(

@@ -171,6 +171,8 @@ const boundaryRules = [
       moduleInternalsViaAlias,
       moduleInternalsViaRelativePath,
       libForbidden,
+      // Relative forms (`../db/client`) are not covered by libForbidden's alias.
+      dbInternals,
     ),
   },
   // (c) src/db below modules; it may import its own internals.
