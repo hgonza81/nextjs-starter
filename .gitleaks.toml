@@ -22,3 +22,12 @@ description = "Public local Supabase demo anon key used by the hardening catalog
 condition = "AND"
 paths = ['''(^|/)tests/db/hardening-catalog\.test\.ts$''']
 regexes = ['''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9\.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0''']
+
+# FND-T-47: the secret-scan failure proof committed this recognizable FAKE token
+# (src/lib/gate-proof-secret.ts, since reverted). It is not a credential. The
+# literal stays in git history, which is scanned in full, so without this entry
+# the scan would stay red forever. The regex matches only this exact string:
+# any other secret is still reported.
+[[allowlists]]
+description = "Fake token used once to prove that the secret scan fails (FND-T-47)"
+regexes = ['''ghp_R7xK2mQ9vL4nB8tZ3wY6cD1fH5jG0sA2pE4u''']
