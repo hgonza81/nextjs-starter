@@ -1,6 +1,5 @@
 import type { Instrumentation } from "next";
 
-
 /**
  * Runs once when the Next.js server starts (`next dev`, `next start`). Loading
  * the env modules here makes a missing or invalid variable fail at startup

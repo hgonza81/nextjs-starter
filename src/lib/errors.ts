@@ -5,11 +5,7 @@
 
 /** Exactly five error types; add one only through an ADR change. */
 export type AppErrorType =
-  | "validation"
-  | "not_found"
-  | "forbidden"
-  | "conflict"
-  | "unexpected";
+  "validation" | "not_found" | "forbidden" | "conflict" | "unexpected";
 
 /** Field name to messages, the shape produced by `z.flattenError(...).fieldErrors`. */
 export type FieldErrors = Readonly<Record<string, readonly string[]>>;
