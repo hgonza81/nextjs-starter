@@ -1,6 +1,6 @@
 # 002 - Platform hardening: specification
 
-**Status:** Draft (awaiting Product Owner approval)
+**Status:** Approved (Product Owner, 2026-11-13: C1-C4 confirmed)
 **Epic:** 002-platform-hardening. Depends on 001-foundations. Next epic: 003-auth-memberships.
 **Inputs:** `requirements.md`, `flows.md`, `reviews/round1/*`, `questions.md` (decisions C1, C2, D1-D17), `traceability.md`.
 **Requirement IDs:** high-level `PH-HR-xx` (in `requirements.md`), spec level `PH-FR-xx` / `PH-NFR-xx`. Acceptance criteria keep the `PH-AC-xx` IDs from `flows.md` (PH-AC-48 dropped, never reused; PH-AC-58 onward are new). Flow IDs `PH-FL-xx` and business rules `BR-xx` are in `flows.md`.
@@ -307,3 +307,4 @@ None blocking beyond C1 to C4 at the top. Revertible defaults are D1-D17 (sectio
 | 2026-11-13 | First draft written, Draft (awaiting Product Owner approval). |
 | 2026-11-13 | Round 2 fixes applied: architect (PH-FR-24, PH-FR-11, PH-FR-20 integers) and tester G1-G9 (PH-AC-08 per-test token, `assertFaultInjection()` seam in PH-FR-23, E2E harness and ports, per-AC test levels, extra spikes, PH-AC-22 warm-up, PH-AC-23 startup validation, PH-AC-78 CSP-violation fixture, `gen:module` CI smoke step in PH-FR-22). Status unchanged: Draft. |
 | 2026-11-13 | Traceability check applied: C3 (nonce CSP renders every page per request; fallback static CSP, ADR 0014) and C4 (fault routes and `assertFaultInjection()` ship behind `DESIGN_PAGE_ENABLED`; fallback in PH-FR-23) added to the Product Owner confirmation block. No requirement or criterion changed. `tasks.md` split and renumbered (62 tasks). Status unchanged: Draft. |
+| 2026-11-13 | Approved by the Product Owner: C1 (hard delete, `created_at`/`updated_at` only), C2, C3 and C4 confirmed with the recommended options. |

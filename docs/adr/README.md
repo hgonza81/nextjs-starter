@@ -30,7 +30,7 @@ See [0000-template.md](0000-template.md).
 | [0009](0009-ci-cd-pipeline.md) | CI/CD pipeline | Accepted |
 | [0010](0010-toolchain-pinning-and-supply-chain.md) | Toolchain pinning and dependency supply chain | Accepted |
 | [0011](0011-validation-and-forms.md) | Validation and forms: Zod and React Hook Form | Accepted |
-| [0012](0012-database-conventions.md) | Database conventions | Accepted (C1 awaits PO confirmation) |
+| [0012](0012-database-conventions.md) | Database conventions | Accepted |
 | [0013](0013-observability.md) | Observability: OpenTelemetry NodeSDK, logger, local collector | Accepted |
 | [0014](0014-security-headers-and-csp.md) | Security headers and CSP | Accepted |
 | [0015](0015-error-model-and-action-wrapper.md) | Error model, Result type and action wrapper | Accepted |

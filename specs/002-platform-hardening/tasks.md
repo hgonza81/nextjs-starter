@@ -1,6 +1,6 @@
 # 002 - Platform hardening: tasks
 
-**Status:** Draft (written ahead of Product Owner approval of the spec; not executable until the spec is Approved)
+**Status:** Approved (spec approved by the Product Owner on 2026-11-13; ready to execute after the tasks themselves are approved)
 **Spec:** [spec.md](spec.md) (Draft, round 2 fixes applied 2026-11-13). IDs: `PH-T-NN`; requirements `PH-FR-NN` / `PH-NFR-NN`; criteria `PH-AC-NN` (section 8 of the spec plus `flows.md` section 6).
 **Execution rules** (`specs/README.md`, "Task execution"): every task is run by a NEW agent with a fresh context, sequentially by default, hand-off through files only. The orchestrator updates the Status column after each task. A task that fails verification is not reopened in place: the orchestrator adds a fix task (next free ID) for a new agent and re-runs the verification.
 
@@ -588,7 +588,7 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Goal:** ADR 0012 final.
 - **Requirements:** PH-FR-17; PH-AC-33.
 - **Read first:** ADR 0012, migration, guard and tests, spec 5 (D11), C1.
-- **Do:** confirm ADR 0012 states each decision with its reason and lists the rules enforced by PH-AC-35; remove the "C1 awaits Product Owner confirmation" line only if the Product Owner approved the spec (otherwise leave it and report); report findings.
+- **Do:** confirm ADR 0012 states each decision with its reason and lists the rules enforced by PH-AC-35; the "C1 awaits Product Owner confirmation" line was already removed when the Product Owner approved the spec on 2026-11-13 (check it is gone); report findings.
 - **Acceptance:** PH-AC-33 satisfied; no unresolved must-fix.
 - **Out of scope:** code changes.
 - **Output:** edited ADR 0012. Commit scope `docs(adr)`.

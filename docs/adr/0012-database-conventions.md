@@ -1,6 +1,6 @@
 # 0012. Database conventions
 
-Status: Accepted (C1, hard delete and only `created_at`/`updated_at`, awaits the Product Owner's confirmation)
+Status: Accepted (C1, hard delete and only `created_at`/`updated_at`, confirmed by the Product Owner on 2026-11-13)
 Date: 2026-11-13
 Epic: 002-platform-hardening
 
