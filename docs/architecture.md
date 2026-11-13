@@ -31,5 +31,23 @@ Modules `auth`, `users`, `tenants` arrive in epic 002.
 ## Conventions
 kebab-case files; named exports; `@/` alias; Server Components by default; mutations via Server Actions returning `{ ok: true, data } | { ok: false, error }`; Zod validation at every boundary; structured server error logging without PII or secrets; Conventional Commits (documented, not enforced).
 
-## Deployment
-GitHub Actions runs fast checks and DB/E2E checks on every push; the deploy job (`vercel pull/build/deploy --prebuilt --prod`) `needs` all blocking jobs. Vercel Git auto-deploy is disabled. The deployed app has no database until a cloud project exists; `/api/health` is liveness only, DB checks run locally and in CI (ADR 0004).
+## CI/CD
+One workflow, `.github/workflows/ci.yml`, trigger `on: push` (no `pull_request`: fork PRs start nothing; Dependabot branches and tags run the checks but never deploy). Permissions are `contents: read`; actions are pinned by full commit SHA with the release in a comment (Dependabot bumps them). Runs use the same `pnpm` scripts as local development.
+
+| Job | Kind | What it does |
+|-----|------|--------------|
+| `fast` | blocking | no Docker: install (frozen lockfile), lint, typecheck, format:check, unit tests, build |
+| `database-and-e2e` | blocking | local Supabase, `db reset`, drift check (`db:schema` + `git diff --exit-code src/db`), `test:db` (the only job that catches RLS and grant regressions), Playwright E2E |
+| `secret-scan` | blocking | Gitleaks binary over the full history (`fetch-depth: 0`), rules and one narrow allowlist in `.gitleaks.toml` |
+| `audit` | informational | `pnpm audit`, `continue-on-error`: shows a red job, the run stays green; never in `needs` |
+| `deploy` | on `main` only | see below |
+
+**Gitleaks pinning.** The binary is downloaded from the release and verified with a hard-coded SHA-256 (`GITLEAKS_VERSION` and `GITLEAKS_SHA256` in the job env). Dependabot does not track it: when bumping, change the version and the hash together, taking the hash from the release's official checksums file.
+
+**Deploy job.** `needs: [fast, database-and-e2e, secret-scan]` and `if: success() && github.ref == 'refs/heads/main'`; Vercel's Git auto-deploy is off (`vercel.json`), so this is the only deploy path. Steps: skip-safe preflight (any of the three `VERCEL_*` secrets missing: green, warning, rest skipped), `vercel pull`, `vercel build --prod`, `vercel deploy --prebuilt --prod --env ...`, then `vercel curl /api/health` (5 attempts, body `{"status":"ok"}`). The CLI is run as `pnpm dlx vercel@65.15.0` (not a devDependency; transitive dependencies unpinned, accepted for the MVP). The deployed app has no database until a cloud project exists: the job sets no `DATABASE_*` or service-role key, and `/api/health` is liveness only (ADR 0004).
+
+**Concurrency.** Workflow group `ci-${{ github.ref }}` cancels in-progress runs on every ref except `main` (`cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}`), because cancelling a run cancels its jobs and could kill a deployment half-way. On `main` runs queue (one running, one pending; a newer pending run replaces the older one, so a middle commit may get no run of its own). The deploy job also has its own `deploy-production` group with cancel off.
+
+**Reduced Supabase stack.** CI starts only Postgres and Kong (`pnpm db:start -x gotrue,realtime,storage-api,...`). Nothing in epic 001 touches Auth, Realtime or Storage, so CI does not prove behaviour with them. Kong stays because the Data-API-disabled test expects a 503 from the gateway. **Epic 002 must remove `gotrue` from the exclusion list** (and the full list should be revisited) when Auth is exercised. The drift check is nearly vacuous with 0 tables and only protects once epic 002 adds tables. Supabase image versions and Postgres 17 come from the pinned Supabase CLI (3.1.0), so CI and local use the same images; images are pulled on every run.
+
+**Known limits.** Until `VERCEL_TOKEN` exists the deploy job is green and skipped, so a green badge does not mean "deployed". The health check runs after production was promoted (no rollback). `NEXT_PUBLIC_APP_URL` is a `localhost` placeholder in production. Dependabot's npm updates currently fail because its updater runs Node 24 and the repo has `engines.node >=26.13.1` with `engineStrict` (actions updates work).
