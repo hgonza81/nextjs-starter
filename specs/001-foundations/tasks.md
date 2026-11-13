@@ -80,7 +80,7 @@
 | FND-T-57 | Fix `vercel deploy` "Project not found" (second real deploy attempt) | developer | 6 | T-56 | done |
 | FND-T-45 | First CI run is green (pending PO push) | tester | 9 | T-44, PO push | done (run 43361816626 green) |
 | FND-T-46 | Vercel deploy and post-deploy smoke test (pending PO push) | tester | 9 | T-45, PO Vercel setup | done (PO to check Vercel env vars in the dashboard) |
-| FND-T-47 | Gates fail on bad input (pending PO push) | tester | 9 | T-46 | todo |
+| FND-T-47 | Gates fail on bad input | tester | 9 | T-46 | done |
 | FND-T-48 | Final acceptance, DoD 9 (pending PO push) | product-manager | 9 | T-47 | todo |
 
 Count by assignee: developer 17, tester 17, product-manager 8, architect 4, ui-ux-designer 2. Total 48.
@@ -642,7 +642,7 @@ Count by assignee: developer 17, tester 17, product-manager 8, architect 4, ui-u
 - **Output:** report in the reply.
 - **Dependencies:** FND-T-45.
 
-### FND-T-47 Gates fail on bad input (pending PO push)
+### FND-T-47 Gates fail on bad input (done)
 - **Assignee:** tester
 - **Goal:** prove each gate fails once and block deploy.
 - **Requirements:** FND-FR-26, FND-FR-24.
@@ -653,6 +653,7 @@ Count by assignee: developer 17, tester 17, product-manager 8, architect 4, ui-u
 - **Out of scope:** extra gates.
 - **Output:** `tests/README.md` update. Commit scope `docs(tests)`.
 - **Dependencies:** FND-T-46.
+- **Execution note (done, 2026-11-13):** the orchestrator ran the five throwaway-commit cases on GitHub Actions (runs 43363308177, 43363938024, 43364322005, 43364785782, 43365201080) and reverted each; the tester verified every run with `gh run view` and recorded them in `tests/README.md`, section "Gate failure proofs". Deploy was skipped in cases 1 to 4; case 5 failed only at "Post-deploy health check" (after the deploy). Case 4 left a permanent fake token in history, allowlisted in `.gitleaks.toml` (`aeb6799`). Final run 43365790603 is green for all blocking jobs and Deploy.
 
 ### FND-T-48 Final acceptance, DoD 9 (pending PO push)
 - **Assignee:** product-manager

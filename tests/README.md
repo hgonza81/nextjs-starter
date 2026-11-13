@@ -476,10 +476,52 @@ legal import passes.
 
 ## Gate failure proofs (FND-FR-26)
 
-To be filled by FND-T-47 after the first push: one entry per case (lint error,
-type error, failing test, dummy secret, failing hello-world, and a red blocking
-job that prevents the deploy), each with the throwaway commit, the observed red
-job, and the revert.
+Executed on GitHub Actions on 2026-11-13 (UTC, run timestamps) against
+`hgonza81/nextjs-starter`, branch `main`, with the Product Owner's
+authorization. Each case was one throwaway commit that broke exactly one gate
+(checked locally beforehand: only that gate failed), pushed on its own, observed
+on the real runner, then reverted. Run results were re-read with
+`gh run view <id> --json conclusion,jobs`.
+
+| #   | Case                                                                                            | Throwaway commit | Run           | Red job and step                                                                   | Deploy              | Revert                                |
+| --- | ----------------------------------------------------------------------------------------------- | ---------------- | ------------- | ---------------------------------------------------------------------------------- | ------------------- | ------------------------------------- |
+| 1   | Lint error: `src/lib/gate-proof-lint.ts` imports `@/db/client`, violating the boundary rule     | `d11b7af`        | `43363308177` | Fast checks, step "Run pnpm lint"                                                  | skipped             | `78bdd22`                             |
+| 2   | Type error: `const x: number = "..."`                                                           | `2afa791`        | `43363938024` | Fast checks, step "Run pnpm typecheck" (and Database and E2E, see below)           | skipped             | `c9f4bcb`                             |
+| 3   | Failing test: `expect(1 + 1).toBe(3)`                                                           | `fd83c0d`        | `43364322005` | Fast checks, step "Run pnpm test"                                                  | skipped             | `59f78e7`                             |
+| 4   | Dummy secret: a recognizable FAKE `ghp_` token in `src/lib/gate-proof-secret.ts`                | `556f8be`        | `43364785782` | Secret scan, step "Scan the full git history" (rule `github-pat`, 1 leak)          | skipped             | `5e1565b` (plus `aeb6799`, see below) |
+| 5   | Failing hello-world: expected health body in `ci.yml` changed to `{"status":"ok","proof":true}` | `88f79bb`        | `43365201080` | Deploy to Vercel, step "Post-deploy health check" (all three blocking gates green) | job red (see below) | `27ad4b2`                             |
+
+Final state: run `43365790603` (on `27ad4b2`) is green for Fast checks,
+Secret scan, Database and E2E and Deploy to Vercel.
+
+Notes per case:
+
+- **Case 2, extra red job.** Database and E2E was also red (step "Run
+  pnpm test:e2e"). This is expected, not a second defect: the Playwright web
+  server runs `next build`, which type-checks, and the build failed with
+  `src/lib/gate-proof-types.ts:2:14 - error TS2322: Type 'string' is not
+assignable to type 'number'`. Fast checks failed on the same error at "Run pnpm
+  typecheck". In case 1 (lint) the build does not lint, so Database and E2E stayed
+  green.
+- **Case 4, the token stays in history.** Secret scan scans the full git
+  history, so the fake token remains detectable after the revert commit. Commit
+  `aeb6799` added a regex allowlist for that exact string to `.gitleaks.toml`
+  (checked locally: the history passes, and a different token is still
+  detected). The rotation rule applies to real secrets: removing a pushed secret
+  is not enough, rotate it.
+- **Case 5, honest limit.** The post-deploy check runs after `vercel deploy
+--prod`, so the deploy had already happened (same app, nothing broken) when
+  the check failed. The proof shows that a wrong health body turns the Deploy
+  job and the run red; it does not roll anything back (accepted judgment J2
+  from T-25).
+- **Dependency audit (informational)** is red in every run (3 known advisories)
+  and never blocks the deploy, by design.
+- In cases 1 to 4 the Deploy job was skipped because a needed blocking job
+  failed, which proves that a red blocking job prevents the deploy.
+
+Lesson: the secret-scan proof leaves a permanent fake token in git history and
+a permanent allowlist entry in `.gitleaks.toml`. Repeat it only if that cost is
+acceptable.
 
 ## When the stack is down
 
