@@ -70,7 +70,7 @@
 | FND-T-62 | Write missing ADRs for decisions made in steps 1-8 | architect | 8 | T-61 | done |
 | FND-T-39 | Accept step 8 | product-manager | 8 | T-38, T-61 | done |
 | FND-T-40 | Test README | tester | 9 | T-39 | todo |
-| FND-T-41 | Project README | developer | 9 | T-39 | todo (Independent of T-40) |
+| FND-T-41 | Project README | developer | 9 | T-39 | done (Independent of T-40) |
 | FND-T-42 | Onboarding dry run | tester | 9 | T-40, T-41 | todo |
 | FND-T-43 | Final architect check: ADRs, architecture, conventions | architect | 9 | T-42 | todo |
 | FND-T-44 | Final acceptance, local part (DoD 1-8, 10) | product-manager | 9 | T-43 | todo |
