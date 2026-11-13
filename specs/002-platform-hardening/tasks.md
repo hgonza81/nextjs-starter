@@ -37,8 +37,8 @@
 | PH-T-17 | Tests: hook (unit) | tester | 1 | T-11 | done |
 | PH-T-18 | E2E: error pages and 404; unit: fault gate | tester | 1 | T-10, T-13 | done |
 | PH-T-19 | E2E: server-side capture (codes, hook, action, route handler) | tester | 1 | T-11, T-12, T-13 | done |
-| PH-T-20 | E2E: no leakage, wrapper logging, request id | tester | 1 | T-11, T-12, T-13 | todo |
-| PH-T-21 | Architect check of step 1 and ADR 0015 / 0013 confirmation | architect | 1 | T-14 to T-20 | todo |
+| PH-T-20 | E2E: no leakage, wrapper logging, request id | tester | 1 | T-11, T-12, T-13 | done |
+| PH-T-21 | Architect check of step 1 and ADR 0015 / 0013 confirmation | architect | 1 | T-14 to T-20, T-63 | todo |
 | PH-T-22 | Accept step 1 | product-manager | 1 | T-21 | todo |
 | PH-T-23 | Spike: `sdk-node` under Turbopack and Node 26, package versions | developer | 2 | T-22 | todo |
 | PH-T-24 | `OTEL_*` variables in `env.server.ts` | developer | 2 | T-23 | todo |
@@ -80,6 +80,7 @@
 | PH-T-60 | Final architect read | architect | 6 | T-59 | todo |
 | PH-T-61 | Final tester read | tester | 6 | T-59 (Independent of T-60) | todo |
 | PH-T-62 | Final acceptance | product-manager | 6 | T-60, T-61 | todo |
+| PH-T-63 | Fix: `request_id` missing on route-handler failures logged by the hook | developer | 1 | T-20 | todo |
 
 Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-ux-designer 1. Total 62.
 
@@ -306,6 +307,17 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Out of scope:** production code changes (report defects); capture tests (T-19).
 - **Output:** spec files. Commit scope `test(e2e)`.
 - **Dependencies:** PH-T-11, PH-T-12, PH-T-13.
+
+### PH-T-63 Fix: `request_id` missing on route-handler failures
+- **Assignee:** developer
+- **Goal:** PH-AC-70 must hold for route-handler failures logged by `onRequestError`; found by PH-T-20 (the E2E test is marked `test.fail`).
+- **Requirements:** PH-FR-04, PH-AC-70.
+- **Read first:** `tests/e2e/leakage-and-request-id.spec.ts` (the `test.fail` annotation on the route-handler case), `src/lib/logger.ts` (`request_id` read via a guarded `headers()` call), `src/instrumentation.ts`, ADR 0013 (how `request_id` is read), the `request.headers` argument that Next passes to `onRequestError` (verify in `node_modules/next/dist/docs`).
+- **Do:** make route-handler failures carry the incoming `x-request-id` (or `x-vercel-id`) in the logged entry, without logging headers in general (the hook must still read only the request id header and nothing else; PH-AC-58 must still pass). Probable cause: `headers()` is not readable from the hook in a route-handler context; the hook gets `request.headers` directly. Remove the `test.fail` annotation from the E2E test. If the fix needs a decision that changes ADR 0013 or 0015, stop and report.
+- **Acceptance:** the route-handler E2E case passes without `test.fail`; PH-AC-58 and PH-AC-70 tests pass; lint, typecheck, format:check, unit and E2E suites pass.
+- **Out of scope:** any other logging change.
+- **Output:** code fix and the test annotation removed. Commit scope `fix(app)`.
+- **Dependencies:** PH-T-20. Must be done before PH-T-21.
 
 ### PH-T-21 Architect check of step 1 and ADR confirmation
 - **Assignee:** architect
@@ -843,3 +855,4 @@ Every PH-FR and PH-NFR appears at least once as a build task and once as a verif
 |------|--------|
 | 2026-11-13 | First draft written, after spec round 2 fixes. Status Draft; not executable until the spec is approved. |
 | 2026-11-13 | Traceability findings F1-F8 applied: PH-AC-76 unit test added to T-18 and listed in T-59; T-06 added to dependencies of the page and hook tasks (via the fixtures task); `flows.md` sections 4-6 added to the common read-first; trace id test and dev-only in-memory exporter added to T-14; wrong PH-AC-11 citation removed from the errors test task; old T-06 split into T-06 (seam and gate) and T-07 (fixtures), old T-18 split into T-19 (capture) and T-20 (leakage, wrapper, request id), old T-35 split into T-37 (CSP, headers, nonce) and T-38 (Server Action origin and size); collector task made sequential after the SDK bootstrap task; critical-path wording fixed. All task IDs after T-06 renumbered (59 tasks became 62); status table, dependencies, matrix, critical path and cross-references updated. Statuses unchanged: Draft / todo. |
+| 2026-11-13 | Added fix task PH-T-63 (route-handler failures lacked `request_id`, found by PH-T-20); PH-T-21 now depends on it. Total 63 tasks. |
