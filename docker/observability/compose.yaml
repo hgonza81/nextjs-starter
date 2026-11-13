@@ -1,0 +1,20 @@
+# Optional local telemetry backend (PH-FR-14, ADR 0013): Grafana LGTM in one
+# container (Grafana, Tempo for traces, Loki for logs, Prometheus for metrics,
+# OpenTelemetry Collector). Not used by `pnpm dev`, tests, build or CI.
+# Start and stop with `pnpm obs:start` / `pnpm obs:stop`; see README.md here.
+#
+# - Image pinned to an exact tag (ADR 0010 pinning policy); bump deliberately.
+# - Every published port is bound to 127.0.0.1 so the stack is not reachable
+#   from the network.
+# - Grafana listens on 3000 inside the container; host port 3001 avoids the
+#   clash with `next dev` on 3000.
+# - No volume: data is discarded when the container is removed.
+name: nextjs-starter-observability
+
+services:
+  lgtm:
+    image: grafana/otel-lgtm:0.41.0
+    ports:
+      - "127.0.0.1:3001:3000" # Grafana UI
+      - "127.0.0.1:4317:4317" # OTLP gRPC
+      - "127.0.0.1:4318:4318" # OTLP HTTP (the SDK default protocol, http/protobuf)
