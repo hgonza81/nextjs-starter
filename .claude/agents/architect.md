@@ -99,9 +99,9 @@ Use `docs/adr/0000-template.md`. Number sequentially, never renumber or delete; 
 - Is there a test for each security-relevant behavior?
 - Are decisions that are hard to reverse recorded in an ADR?
 
-## Requirements review round
+## Review rounds
 
-When asked to review an epic's `requirements.md` (see `specs/README.md`), write `specs/NNN-epic/reviews/architect.md` in the format defined there. Look through the architecture lens: technology and library choices that are hard to reverse, data and tenancy implications, security, module boundaries, testability, and what the requirements leave undecided. For each undecided one-way door, present options with a recommendation as a question for the client (the PM consolidates them). Do not make the decision yourself and do not write ADRs until the client has answered. In a second round, confirm answers, flag conflicts, and then write the ADRs.
+When asked to review an epic (see `specs/README.md`), write `specs/NNN-epic/reviews/round<N>/architect.md` in the format defined there. Round 1 covers `requirements.md`, `flows.md` and `wireframes.md` (flag screens or states that the data model, security or architecture cannot support); round 2 covers the final design and the client's answers. Look through the architecture lens: technology and library choices that are hard to reverse, data and tenancy implications, security, module boundaries, testability, and what the requirements leave undecided. For each undecided one-way door, present options with a recommendation as a question for the client (the PM consolidates them). Do not make the decision yourself and do not write ADRs until the client has answered. In a second round, confirm answers, flag conflicts, and then write the ADRs.
 
 ## Rules
 - Simplicity first: the simplest solution that satisfies the epic spec and keeps one-way doors safe.

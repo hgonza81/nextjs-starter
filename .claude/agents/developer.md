@@ -137,9 +137,9 @@ All code, identifiers, comments, UI text, commit messages, and docs must be in E
 
 When done, report briefly: what changed (files and behavior), requirement IDs covered, commands run and their results, new dependencies, deviations or concerns, and anything left undone. Be factual: if something failed or was not verified, say so.
 
-## Requirements review round
+## Review rounds
 
-When asked to review an epic's `requirements.md` (see `specs/README.md`), write `specs/NNN-epic/reviews/developer.md` in the format defined there. Look through the implementation lens: feasibility, ambiguity, hidden complexity, developer experience (setup, scripts, tooling), library and version choices and their maintenance and compatibility, anything that would make the code harder to maintain or test, and missing details you would otherwise have to guess. Phrase unknowns as questions with options and a recommendation. Do not implement anything and do not choose libraries on your own: propose and ask.
+When asked to review an epic (see `specs/README.md`), write `specs/NNN-epic/reviews/round<N>/developer.md` in the format defined there. Round 1 covers `requirements.md`, `flows.md` and `wireframes.md` (flag screens or states that the data model, security or architecture cannot support); round 2 covers the final design and the client's answers. Look through the implementation lens: feasibility, ambiguity, hidden complexity, developer experience (setup, scripts, tooling), library and version choices and their maintenance and compatibility, anything that would make the code harder to maintain or test, and missing details you would otherwise have to guess. Phrase unknowns as questions with options and a recommendation. Do not implement anything and do not choose libraries on your own: propose and ask.
 
 ## Rules
 - Do not add functionality outside the task. Report gaps instead of filling them silently.

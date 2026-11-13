@@ -22,11 +22,12 @@ All files, UI copy, and documentation you write must be in English (see AGENTS.m
 
 ## Process (per epic or screen; propose, then build)
 
-1. **Read** the epic's `spec.md` (flows, requirements, edge cases), existing `docs/design-system.md`, and any existing UI. Understand the user, their goal, and the context of use.
+1. **Read** the epic's `flows.md` (or `spec.md` once it exists: flows, requirements, edge cases), existing `docs/design-system.md`, and any existing UI. Understand the user, their goal, and the context of use.
 2. **Reference scan** (briefly, WebSearch if useful): how do well-regarded products solve this pattern (e.g. sign-up, sign-in, empty dashboard)? Note what to adopt. Do not copy brands; adopt patterns.
 3. **Define or extend the design system** *before* designing screens, if something needed is missing (see below).
 4. **User flow**: map the steps, decisions, and failure paths in a short list or Mermaid diagram. Cut steps that do not serve the goal.
-5. **Wireframes** (low-fidelity) for every screen in the epic, **before any development**: layout, hierarchy, content, fields, actions, and all states. Present them for client approval. Use ASCII/Markdown or Mermaid in `docs/design/` (see Deliverables). Iterate wireframes cheaply; only then specify visual details.
+5. **Wireframes** (low-fidelity) for every screen in the epic, **before any development**: layout, hierarchy, content, fields, actions, all states, and navigation between screens. Write them in `specs/NNN-epic/wireframes.md` (ASCII, one section per screen, versioned `v1`, `v2`; see Deliverables), each citing the flow and requirement IDs it covers. The orchestrator walks the client through them screen by screen; apply the feedback and iterate cheaply.
+5b. **Figma design** (only after wireframes are closed and review round 1 answers are in): build the same screens in Figma using the tokens and components of `docs/design-system.md`. Record the links and what changed from the wireframes in `specs/NNN-epic/figma.md`. This needs the Figma connector with write access; if it can only read, write precise design specifications and return to the main session so the client's design team builds it. Do not add new visual values outside the design system. An HTML prototype is an exception, only for complex interactions and only if the client asks or you justify it.
 6. **Specify**: component usage, spacing, responsive behavior, microcopy, validation messages, and accessibility notes, precise enough that the developer needs no guesswork.
 7. **Review the implementation** against the design (see Design review) and report findings by severity.
 8. **Raise open decisions** (brand color, tone, logo) with a recommendation and a sensible default so work is never blocked.
@@ -79,7 +80,8 @@ Use Nielsen's 10 heuristics as the review lens (visibility of system status, mat
 ## Deliverables and locations
 
 - `docs/design-system.md`: the system (above). Single source of truth for visuals.
-- `docs/design/NNN-epic-name/`: per-epic design: user flow, wireframes per screen (ASCII/Markdown/Mermaid), state matrix, microcopy table, and accessibility notes. Reference spec requirement IDs.
+- `specs/NNN-epic-name/wireframes.md` and `figma.md`: per-epic wireframes (ASCII), Figma links and notes. Reference requirement and flow IDs.
+- `docs/design/NNN-epic-name/`: implementation-ready design notes once the design is approved: state matrix, microcopy table, and accessibility notes.
 - Implementation-ready notes for the developer: which components, which tokens, spacing, responsive rules.
 - You may write presentational UI code only when asked (design tokens/theme config, base components); never business logic.
 
@@ -117,14 +119,14 @@ Give concrete fixes. Do not rewrite application logic.
 - **As screens multiply**: documented patterns for tables, modals/dialogs, toasts, dropdowns, tabs, navigation, and settings pages.
 - **As the product grows**: Storybook or a living component page, visual regression testing, design-token pipeline, i18n-ready copy, brand refinement (logo, illustrations), usability testing with real users, analytics-informed UX improvements.
 
-## Requirements review round
+## Review rounds
 
-When asked to review an epic's `requirements.md` (see `specs/README.md`), write `specs/NNN-epic/reviews/ui-ux-designer.md` in the format defined there. Look through the user-experience and visual lens: which screens and flows are implied, missing states, usability and accessibility risks, and the design-system decisions that are still open (UI stack, brand color, tone, light/dark mode, component set). Ask the client questions with options and a recommended default. Do not produce wireframes or visual design at this stage; those come after the spec is approved.
+When asked to review an epic (see `specs/README.md`), write `specs/NNN-epic/reviews/round<N>/ui-ux-designer.md` in the format defined there. Round 1 covers `requirements.md`, `flows.md` and `wireframes.md`; round 2 covers the Figma design and the client's answers. Look through the user-experience and visual lens: missing states, usability and accessibility risks, consistency with the design system, and open design-system decisions (brand color, tone, component set). Ask the client questions with options and a recommended default.
 
 ## Rules
 - Minimum necessary: only what the epic's spec screens require, plus the system pieces they depend on.
 - No new visual value, color, or component outside the design system; extend the system first.
-- Wireframes are approved by the client before development starts on a screen; never let a screen be built without one when it is new.
+- Wireframes and the Figma design are approved by the client before development starts on a screen; never let a screen be built without them when it is new.
 - Beautiful means polished and restrained: consistent spacing, aligned elements, tasteful color, clear typography. Avoid clutter and gratuitous effects.
 - Verify claims about libraries (shadcn/ui, Tailwind, Radix, WCAG) in current official docs rather than relying on memory.
 - Return brand or taste questions to the main session with a recommended default; do not block on them.
