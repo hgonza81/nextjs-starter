@@ -1,30 +1,67 @@
 # Tests
 
 Three layers, each with its own command. Write every test at the cheapest layer
-that gives real confidence.
+that gives real confidence. Every test name starts with the requirement it
+protects (for example `FND-FR-22: ...`).
 
-| Layer    | Command         | Where                          | Needs Docker/Supabase                      |
-| -------- | --------------- | ------------------------------ | ------------------------------------------ |
-| Unit     | `pnpm test`     | `src/**/*.test.ts` (colocated) | No                                         |
-| DB / RLS | `pnpm test:db`  | `tests/db/*.test.ts`           | Yes (local Supabase)                       |
-| E2E      | `pnpm test:e2e` | `tests/e2e/*.spec.ts`          | No (no database; DB variables are removed) |
+## Commands
 
-Coverage (report only, no threshold): `pnpm test:coverage`.
+| Layer    | Command         | Where                                                 | Needs Docker/Supabase                      |
+| -------- | --------------- | ----------------------------------------------------- | ------------------------------------------ |
+| Unit     | `pnpm test`     | `src/**/*.test.ts(x)` (colocated) and `tests/lint/**` | No                                         |
+| DB / RLS | `pnpm test:db`  | `tests/db/*.test.ts`                                  | Yes (local Supabase)                       |
+| E2E      | `pnpm test:e2e` | `tests/e2e/*.spec.ts`                                 | No (no database; DB variables are removed) |
+
+- `pnpm test` is Vitest, project `unit`. It passes with Docker stopped.
+- `pnpm test:db` is Vitest, project `db`, real local Supabase as the `app_backend`
+  role. Files run one after another (`fileParallelism: false`).
+- `pnpm test:e2e` is Playwright (Chromium) against a production build. It builds
+  once and starts two servers (see "E2E (FND-T-17)" and "E2E: design system").
+- Any extra argument is passed to the runner: `pnpm test src/lib`,
+  `pnpm test:db tests/db/harness.test.ts`, `pnpm test:e2e tests/e2e/health.spec.ts`.
+- Coverage is report only, with no threshold (FND-FR-19): `pnpm test:coverage`
+  runs the unit project with v8 and prints a text summary (HTML in `coverage/`).
+  It is a signal; read the uncovered risky branches, do not chase a percentage.
+- Quick loop while coding: `pnpm test`. Before a commit: `pnpm lint`,
+  `pnpm typecheck`, `pnpm test`. Before a merge or push: also `pnpm test:db`
+  and `pnpm test:e2e` (CI runs all of them).
+
+## Layout
+
+```text
+src/**/*.test.ts(x)          unit tests, next to the code they test
+tests/
+  db/                        DB / RLS tests (project `db`)
+  e2e/                       Playwright specs; helpers/ holds axe and /design helpers
+  lint/                      lint boundary-rule tests (run in `pnpm test`)
+    fixtures/{cycle,acyclic}/  real files for the import-cycle rule
+  utils/                     shared harness: roles, admin, throwaway tables, matrices,
+                             schema guard, factories, ids, local env, global setup
+```
+
+Shared configuration: `vitest.config.mts` (projects `unit` and `db`, the `@/`
+alias, a stub for `server-only`) and `playwright.config.ts`.
 
 ## Prerequisites
 
 - Node 26 and pnpm from `package.json` (`node -v` must be 26.x), `pnpm install`.
-- Docker running (DB tests only).
+- Docker running (a Docker-compatible runtime such as Docker Desktop or OrbStack)
+  for `pnpm test:db` and the local stack. `pnpm test` and `pnpm test:e2e` do not
+  need it.
+- Local Supabase started and migrated, for `pnpm test:db` only: `pnpm db:start`,
+  then `pnpm db:reset` once (it applies the migrations and `supabase/seed.sql`,
+  which creates the `app_backend` role and its local password).
 - Chromium for E2E, once per machine: `pnpm exec playwright install chromium`
-  (CI later: `pnpm exec playwright install --with-deps chromium`). Browsers are
-  stored in the user cache (`~/Library/Caches/ms-playwright` on macOS), outside
-  the repository, so they are never committed.
-- Local Supabase started and migrated: `pnpm db:start`, then `pnpm db:reset`
-  once (it applies the migrations and `supabase/seed.sql`, which creates the
-  `app_backend` role and its local password).
-- No `.env.local` is needed for the DB tests: `tests/utils/local-env.mts` holds
-  the local, non-secret defaults (same as `.env.example`). Real environment
-  variables override them. The suite refuses any non-loopback database host.
+  (CI: `pnpm exec playwright install --with-deps chromium`). Browsers are stored
+  in the user cache (`~/Library/Caches/ms-playwright` on macOS), outside the
+  repository, so they are never committed.
+- Environment variables: none are needed. `tests/utils/local-env.mts` holds the
+  local, non-secret DB defaults (same as `.env.example`) and real environment
+  variables override them; the suite refuses any non-loopback database host.
+  `playwright.config.ts` sets the three `NEXT_PUBLIC_*` variables itself with
+  the `.env.example` values (verified: `pnpm test:e2e` passes with none of them
+  exported). If you start the app by hand outside Playwright, export the three
+  `NEXT_PUBLIC_*` values from `.env.example` first.
 
 ## Resetting state
 
@@ -35,6 +72,8 @@ Coverage (report only, no threshold): `pnpm test:coverage`.
   global setup, which drops leftover `public.tmp_test_*` tables.
 - Run `pnpm test:db` twice in a row: it must pass both times.
 - Stop the stack when done: `pnpm db:stop`.
+- E2E keeps no state between runs; `test-results/` and `playwright-report/` are
+  overwritten by each run.
 
 ## DB test harness (`tests/utils/`)
 
@@ -123,7 +162,8 @@ Files (all real Postgres, through the production `withRls`):
   `tests/utils/schema-guard.ts` and reads the catalog; its own tests prove it
   reports a table without RLS, with RLS but no policy, with a policy but RLS off,
   and a partitioned table, and honors the allowlist (`SCHEMA_GUARD_ALLOWLIST`,
-  empty). Every real table added in epic 002 is checked automatically.
+  empty). Every real table added in epic 002 is checked automatically. See
+  "Schema guard allowlist" below.
 
 Not covered here, on purpose: the lint fixture (ADR test 10, FND-T-38); the Data
 API being off (an HTTP check of the local stack, not a database property; the
@@ -170,6 +210,17 @@ Lessons recorded while writing these: a first version of the insert case used
 `RETURNING`. Allow cases seed their own row, so no case depends on another.
 Tests rely on `fileParallelism: false`: the guard on the real schema would see
 another file's throwaway tables if files ran in parallel.
+
+## Schema guard allowlist
+
+The guard (`findUnguardedPublicTables` in `tests/utils/schema-guard.ts`, used by
+`tests/db/schema-guard.test.ts`) fails `pnpm test:db` when a table in `public`
+has RLS disabled or no policy. The only escape hatch is
+`SCHEMA_GUARD_ALLOWLIST` in the same file, a list of bare table names that is
+empty and must stay empty unless a table is justified in a code review (put the
+reason in a comment next to the name). Prefer fixing the table: enable RLS and
+add a policy in the migration. Throwaway `tmp_test_*` tables of other tests are
+created and dropped inside their own tests and are not allowlisted.
 
 ## Hardening catalog tests (FND-T-51)
 
@@ -399,6 +450,36 @@ returned `/design/frames/missing` for the `loading` frame.
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | One frame slug points to a 404 route            | Both `all 18 frames loaded` tests red, naming the 6 `/design/frames/missing?theme=...` frames that did not load |
 | Same mutation with the first version of the fix | Survived (a 404 page has a body and its own path); this is why the title landmark was added                     |
+
+## Lint boundary tests (`tests/lint`, FND-FR-12, FND-FR-20)
+
+`tests/lint/boundaries.test.ts` runs in `pnpm test` (no Docker). It runs ESLint
+programmatically with the repository's real `eslint.config.mjs` and asserts the
+rule ids reported, for every boundary rule (a) to (f) in
+`docs/architecture.md`, "Lint rules": one illegal import is reported and one
+legal import passes.
+
+- Rules (a), (b), (c), (d), (f) use `eslint.lintText(code, { filePath })` with
+  inline source and a virtual `filePath`; the path only selects the config zone
+  (for example `src/lib/x.ts` versus `src/app/x.ts`). Fast, and no file has to
+  exist.
+- Rule (e), `import/no-cycle`, cannot work on virtual files (it resolves real
+  modules), so it is switched off for the inline tests and proven on real
+  fixtures: `tests/lint/fixtures/cycle/{a,b}.ts` import each other and must be
+  reported, `tests/lint/fixtures/acyclic/{a,b}.ts` must pass. The fixtures are in
+  the ESLint `globalIgnores`, so `pnpm lint` and the build skip them; the test
+  lints them with `ignore: false`.
+- To add a rule: add an `it.each` row with an illegal and a legal case, and keep
+  the zone-specific virtual path. Removing a rule from the config makes its test
+  fail, because the test asserts the specific rule id.
+- Run only this file: `pnpm test tests/lint`.
+
+## Gate failure proofs (FND-FR-26)
+
+To be filled by FND-T-47 after the first push: one entry per case (lint error,
+type error, failing test, dummy secret, failing hello-world, and a red blocking
+job that prevents the deploy), each with the throwaway commit, the observed red
+job, and the revert.
 
 ## When the stack is down
 
