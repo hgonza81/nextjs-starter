@@ -72,6 +72,7 @@
 | FND-T-40 | Test README | tester | 9 | T-39 | done |
 | FND-T-41 | Project README | developer | 9 | T-39 | done (Independent of T-40) |
 | FND-T-42 | Onboarding dry run | tester | 9 | T-40, T-41 | todo |
+| FND-T-63 | README clarity fixes from the onboarding dry run (T-42) | developer | 9 | T-42 | done |
 | FND-T-43 | Final architect check: ADRs, architecture, conventions | architect | 9 | T-42 | todo |
 | FND-T-44 | Final acceptance, local part (DoD 1-8, 10) | product-manager | 9 | T-43 | todo |
 | FND-T-56 | Vercel framework preset in `vercel.json` and ci.yml leftovers (first real deploy failed at Build) | developer | 6 | T-27 | done |
@@ -583,6 +584,13 @@ Count by assignee: developer 17, tester 17, product-manager 8, architect 4, ui-u
 - **Acceptance:** completed in 15 minutes or less, or the gaps are listed for a fix task.
 - **Output:** report in the reply.
 - **Dependencies:** FND-T-40, FND-T-41.
+
+### FND-T-63 README clarity fixes from the onboarding dry run (T-42)
+- **Assignee:** developer
+- **Goal:** fix the README gaps found by the onboarding dry run.
+- **Do:** document the shared backup volume and the `pnpm db:reset` after switching checkouts; add an anon-key extraction one-liner and state that `ANON_KEY` is the key to use; note that `pnpm install` needs network access and `nvm` is optional; reword the `AGENTS.md` troubleshooting entry as "may happen".
+- **Output:** `README.md`. Commit scope `docs`, body `Task: FND-T-63`.
+- **Dependencies:** FND-T-42.
 
 ### FND-T-43 Final architect check: ADRs, architecture, conventions
 - **Assignee:** architect

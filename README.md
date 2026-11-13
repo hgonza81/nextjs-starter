@@ -12,8 +12,8 @@ Docker images, which depends on your connection.
 
 ## Prerequisites
 
-- **Node 26** (`>=26.13.1 <27`). The exact version is in `.nvmrc`; with nvm run
-  `nvm use`. Installing under another Node major fails (`engineStrict`), but a
+- **Node 26** (`>=26.13.1 <27`). The exact version is in `.nvmrc`. `nvm` is
+  optional: any way of getting Node 26 works (with nvm, run `nvm use`). Installing under another Node major fails (`engineStrict`), but a
   plain `pnpm install` on an already-installed tree can skip that check, so
   confirm with `node -v` (it must print `v26.x`). Node 26 ships without
   corepack: do not use `corepack`.
@@ -30,16 +30,24 @@ Docker images, which depends on your connection.
 
 ```bash
 nvm use                      # or any way to get Node 26; check `node -v`
-pnpm install
+pnpm install                 # needs network access
 cp .env.example .env.local   # never commit .env.local
 pnpm db:start                # starts local Supabase in Docker
 pnpm db:status               # prints the local keys
 ```
 
-Copy the local anon key (the `ANON_KEY` value, or `PUBLISHABLE_KEY`, in the
-`pnpm db:status` output) into `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`,
-replacing the placeholder `replace-with-local-anon-key`. It is a local-only
-value, not a secret. Then:
+Copy the local anon key into `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`,
+replacing the placeholder `replace-with-local-anon-key`. Use the `ANON_KEY`
+value, not `PUBLISHABLE_KEY`: the app does not use a Supabase client yet (it
+only validates that the variable is non-empty, `src/lib/env.ts`), so the code
+does not decide between them, and `ANON_KEY` is the one verified to work. To
+print it:
+
+```bash
+pnpm -s db:status | grep -o '"ANON_KEY":"[^"]*'   # prints "ANON_KEY":"<key>; copy only <key>
+```
+
+It is a local-only value, not a secret. Then:
 
 ```bash
 pnpm db:reset                # applies migrations and supabase/seed.sql
@@ -77,6 +85,9 @@ Notes on the database commands:
 
 - The Supabase project id (`nextjs-starter`) is the same in every checkout, so
   two copies of this project cannot run local stacks at the same time.
+  Stopping the stack saves its data to a backup volume shared by all
+  checkouts (same project id), so after switching checkouts run
+  `pnpm db:reset` before relying on the database.
 - `pnpm db:status` lists some services (rest, imgproxy, pooler) as "Stopped
   services". That is expected: the Data API is disabled on purpose, and the
   app reaches Postgres through Drizzle (ADR 0003). The local pooler user is
@@ -122,17 +133,17 @@ the minimums is fine; do not lower them or replace them with the default.
 
 ## Troubleshooting
 
-| Symptom                                                   | Cause and fix                                                                                                         |
-| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `ERR_PNPM_UNSUPPORTED_ENGINE` on install                  | Wrong Node major. Run `nvm use` (Node 26) and install again, using `pnpm install --force` if the tree already exists. |
-| `pnpm db:start` says it cannot connect to the Docker API  | Docker is not running. Start Docker Desktop, OrbStack or Colima.                                                      |
-| `pnpm db:start` fails on ports or container names         | Another local Supabase stack (or another checkout of this project) is running. Stop it with `pnpm db:stop` there.     |
-| App starts but Supabase calls fail                        | The anon key in `.env.local` is still the placeholder. Copy it from `pnpm db:status`.                                 |
-| `pnpm test:db` fails with a missing role or schema        | Run `pnpm db:start`, then `pnpm db:reset`.                                                                            |
-| `pnpm db:schema` complains about `DATABASE_MIGRATION_URL` | Create `.env.local` from `.env.example` (see Setup).                                                                  |
-| E2E cannot launch a browser                               | Run `pnpm exec playwright install chromium`.                                                                          |
-| `Skipping migration .gitkeep`-style warnings from the CLI | Harmless Supabase CLI output.                                                                                         |
-| `pnpm dev` modifies `AGENTS.md`                           | Next.js re-adds an agent-rules block. Do not commit that change: `git checkout AGENTS.md`.                            |
+| Symptom                                                   | Cause and fix                                                                                                                                  |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ERR_PNPM_UNSUPPORTED_ENGINE` on install                  | Wrong Node major. Run `nvm use` (Node 26) and install again, using `pnpm install --force` if the tree already exists.                          |
+| `pnpm db:start` says it cannot connect to the Docker API  | Docker is not running. Start Docker Desktop, OrbStack or Colima.                                                                               |
+| `pnpm db:start` fails on ports or container names         | Another local Supabase stack (or another checkout of this project) is running. Stop it with `pnpm db:stop` there.                              |
+| App starts but Supabase calls fail                        | The anon key in `.env.local` is still the placeholder. Copy it from `pnpm db:status`.                                                          |
+| `pnpm test:db` fails with a missing role or schema        | Run `pnpm db:start`, then `pnpm db:reset`.                                                                                                     |
+| `pnpm db:schema` complains about `DATABASE_MIGRATION_URL` | Create `.env.local` from `.env.example` (see Setup).                                                                                           |
+| E2E cannot launch a browser                               | Run `pnpm exec playwright install chromium`.                                                                                                   |
+| `Skipping migration .gitkeep`-style warnings from the CLI | Harmless Supabase CLI output.                                                                                                                  |
+| `pnpm dev` modifies `AGENTS.md`                           | This may happen: `next dev` writes an agent-rules block (see the note in `AGENTS.md`). Do not commit it by accident: `git checkout AGENTS.md`. |
 
 ## CI/CD
 
