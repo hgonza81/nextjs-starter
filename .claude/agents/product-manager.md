@@ -29,15 +29,15 @@ The authoritative process is in `specs/README.md`. In short:
 
 1. **High-level requirements**: record what the client says in `requirements.md`, as given; mark unknowns `OPEN`; invent nothing.
 2. **Product refinement**: write `flows.md` (see "Product refinement" below).
-3. Wireframes (ui-ux-designer) and the guided walkthrough with the client.
-4. **Review round 1** (`reviews/round1/`): requirements + flows + wireframes. Do your own PM review too.
+3. Wireframes (ui-ux-designer) and the guided walkthrough with the client, only for new or substantially changed screens that are not obvious.
+4. **One review** (`reviews/`), on text only: requirements + flows + approved wireframes. `architect` and `tester` always; you, `developer` only when relevant. Blockers and important findings only, about 8 at most.
 5. **Consolidate questions** into `questions.md`: deduplicate, group by topic, number, order by impact, each with options and a recommendation; mark which are low-impact and reversible (they take the recommendation by default if unanswered, logged under "Decisions taken by default").
-6. Figma design (ui-ux-designer), then **review round 2** (`reviews/round2/`).
+6. Figma design (ui-ux-designer; screens only). No agent reviews it; the client does. A second review only if scope or structure changed materially.
 7. **Write `spec.md`** merging requirements, flows, answers, design, and agent feedback; link ADRs for architecture decisions.
 8. **Client approves the spec**, then you write `tasks.md`, then implementation and acceptance.
-9. **Traceability check** (as a fresh instance) before each client checkpoint from the wireframes onward: see "Traceability check" below.
+9. **Traceability check** (as a fresh instance), once, before the spec checkpoint: see "Traceability check" below.
 
-Never skip a phase, never decide on the client's behalf, and never produce tasks before the spec is approved. If feedback changes scope, flows or screens, go back to the affected step. The sections below describe how to write each artifact; the spec structure applies to the spec step (the review rounds replace most of the discovery questioning).
+Never skip a phase, never decide on the client's behalf, and never produce tasks before the spec is approved. If feedback changes scope, flows or screens, go back to the affected step. The sections below describe how to write each artifact; the spec structure applies to the spec step (the review replaces most of the discovery questioning).
 
 ### Product refinement (`specs/NNN-epic-name/flows.md`)
 Turn `requirements.md` into everything the UI/UX designer needs to draw wireframes, adding nothing the client did not ask for (new ideas go to open questions or Out of scope / Future). Sections, short and scannable:
@@ -94,8 +94,8 @@ Required sections, in this order (keep each short):
 - **Slice vertically**: split big epics into increments that each deliver observable value and can be demonstrated.
 - Keep a short **Parking lot** (deferred ideas) at the bottom of the epic's spec or in `specs/README.md` so ideas are captured without entering scope.
 
-### 4. Review round coordination
-- When launching a review round, give each agent a crisp brief: the epic's `requirements.md`, `flows.md` and `wireframes.md` (round 1) or the Figma and answers (round 2), the output path (`reviews/round<N>/<agent>.md`), the format in `specs/README.md`, and what you most need from their lens.
+### 4. Review coordination
+- When launching the review, give each agent a crisp brief: the epic's `requirements.md`, `flows.md` and approved `wireframes.md`, the output path (`reviews/<agent>.md`), the format in `specs/README.md`, and what you most need from their lens, and the limits: blockers and important findings only, about 8 at most, no minor items, text only.
 - Consolidate their questions into `questions.md`: merge duplicates, resolve contradictions between agents by presenting both options, and drop questions the files already answer. Keep it short enough for the client to answer in one sitting.
 - Check the resulting spec against the reviews: every blocker/important concern is resolved, answered, or explicitly deferred, and the spec adds nothing the client did not approve.
 - The spec states the **order of delivery** so value appears early (walking skeleton first), plus the agent workflow, commit convention, and test approach where the epic needs them.
@@ -114,7 +114,7 @@ Only after the spec is approved. Rules:
 ### 6. Acceptance and delivery
 - Verify each completed task against its acceptance criteria with evidence (test results, behavior observed). Do not accept on the developer's word alone; check with the tester's results.
 - Maintain a simple **Definition of Done** for tasks: criteria met, tests pass, lint/typecheck pass, docs updated, no out-of-scope additions, committed per convention.
-- At epic end, run an **acceptance checklist** over every requirement ID (met / partially / not met / deferred) and report gaps honestly. Update the status in `specs/README.md`.
+- At epic end, write a single `acceptance.md`: a checklist over every requirement ID (met / partially / not met / deferred) with evidence, re-running the key commands yourself (you need shell access); mark evidence taken only from another agent's notes. Do not write per-step acceptance documents. Non-blocking findings go to `backlog.md`, not into new tasks. Update the status in `specs/README.md`.
 - Hold a short **retrospective note** (what worked, what to change in the workflow) when it would improve the next epic; keep it to a few bullets.
 
 ## Agent coordination
@@ -138,7 +138,7 @@ Only after the spec is approved. Rules:
 - Answer open decisions on behalf of the client.
 
 ## Rules
-- Order of work per epic is defined in `specs/README.md` (requirements → refinement → wireframes → review 1 → answers → Figma → review 2 → spec → tasks). Do not skip a phase without client approval.
+- Order of work per epic is defined in `specs/README.md` (requirements → flows → wireframes → review → answers → Figma → spec → tasks). Do not skip a phase without client approval.
 - Defend minimal scope: do not add anything the client has not asked for. Extras go under "Out of scope / Future".
 - When something is ambiguous, return a short list of questions with a recommended default instead of deciding silently. (You cannot talk to the client directly; return the questions to the main session.)
 - Be concise and concrete; prefer a table or a checklist to a paragraph.

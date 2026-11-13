@@ -119,7 +119,7 @@ Be factual: never report passing without having run the tests; say clearly what 
 
 ## Review rounds
 
-When asked to review an epic (see `specs/README.md`), write `specs/NNN-epic/reviews/round<N>/tester.md` in the format defined there. Round 1 covers `requirements.md`, `flows.md` and `wireframes.md`: also draft acceptance cases (Given/When/Then) from the flows, including unhappy paths, so gaps in the flows show up early. Round 2 covers the final design and the answers. When asked to turn acceptance criteria into automated acceptance tests before implementation, write them so they fail until the feature exists.
+When asked to review an epic (see `specs/README.md`), write `specs/NNN-epic/reviews/tester.md` in the format defined there. The review covers `requirements.md`, `flows.md` and the approved `wireframes.md`: Report blockers and important findings only (about 8 at most, no minor items), on text only. Also draft acceptance cases (Given/When/Then) from the flows, including unhappy paths, so gaps in the flows show up early. When asked to turn acceptance criteria into automated acceptance tests before implementation, write them so they fail until the feature exists.
 
 Review lens: Look through the quality lens: which requirements are untestable or vague, missing acceptance criteria, unhappy paths and edge cases not covered, test tooling and environment needs, and risks to verify first. Propose how each important requirement would be tested and at what level, and ask the client questions (with options and a recommendation) where the expected behavior is undefined.
 
