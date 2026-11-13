@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import type { ReactNode } from "react";
 import { PRODUCT_NAME } from "@/components/brand/wordmark";
 import { Toaster } from "@/components/ui/sonner";
+import { assertFaultInjection } from "@/lib/fault-injection";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,9 +16,11 @@ export const viewport: Viewport = {
   colorScheme: "light dark",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
+  // PH-FR-23: test-only seam, a no-op unless DESIGN_PAGE_ENABLED is on.
+  await assertFaultInjection();
   return (
     <html lang="en" className={GeistSans.variable}>
       <body>
