@@ -1,0 +1,119 @@
+# FND-FR-23: continuous integration. Runs the same documented commands as local
+# development (see the package.json scripts), so a green local run predicts a
+# green CI run.
+#
+# Single working branch (main): the workflow runs on every push, no
+# pull_request trigger. The security jobs (secret scan, audit) and the deploy
+# job are added by FND-T-22 and FND-T-24.
+#
+# Action versions are pinned to full commit SHAs (the comment names the
+# release). Dependabot (FND-T-22) keeps them current.
+name: CI
+
+on: push
+
+# A newer push to the same ref cancels the run still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: jobs only read the repository.
+permissions:
+  contents: read
+
+env:
+  # The three public variables are inlined at build time and validated by
+  # next.config.ts (FND-T-49). They are placeholders, not secrets.
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: replace-with-local-anon-key
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+jobs:
+  # Group 1: no Docker. BLOCKING.
+  fast:
+    name: Fast checks (blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # pnpm version comes from the packageManager field of package.json.
+      # Node 26 ships without corepack, so pnpm is installed by this action.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm format:check
+      - run: pnpm test
+      - run: pnpm build
+
+  # Group 2: Docker and local Supabase. BLOCKING. Independent of the fast job
+  # (no `needs`) so both report in parallel.
+  database-and-e2e:
+    name: Database and E2E (blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Same value as .env.example; used by the schema drift check below.
+      DATABASE_MIGRATION_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      # Playwright retries and the GitHub reporter key off this variable.
+      CI: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Only Postgres and the Kong gateway are needed so far: no test touches
+      # Auth, Storage or Realtime. Kong stays because the FND-FR-08 test checks
+      # that the gateway answers 503 for the disabled Data API (without it the
+      # request is refused and the test fails). Remove services from this list
+      # when an epic needs them.
+      - name: Start local Supabase
+        run: >-
+          pnpm db:start
+          -x gotrue,realtime,storage-api,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      - name: Apply migrations and seed
+        run: pnpm db:reset
+
+      # FND-FR-07: the generated Drizzle schema must match the migrations.
+      - name: Schema drift check
+        run: |
+          pnpm db:schema
+          git diff --exit-code src/db
+
+      # test:db is the only job that catches behavioural regressions in
+      # tenant isolation (FND-T-19): it must stay blocking.
+      - run: pnpm test:db
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # System dependencies are not cached, so they are installed every run.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop local Supabase
+        if: always()
+        run: pnpm db:stop
