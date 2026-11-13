@@ -8,13 +8,18 @@ Short overview; decisions and reasons are in the ADRs ([index](adr/README.md)). 
 | [0002](adr/0002-supabase-local-first-and-migrations.md) | Supabase local-first, SQL-first migrations, `db:schema` |
 | [0003](adr/0003-drizzle-rls-data-access.md) | Drizzle, `withRls`, `app_backend` role, Data API off |
 | [0004](adr/0004-env-and-secrets.md) | Environment variables, secrets, deployment |
-| [0005](adr/0005-tenant-isolation-direction.md) | Tenant isolation direction for epic 002 |
+| [0005](adr/0005-tenant-isolation-direction.md) | Tenant isolation direction (applied in epic 003) |
 | [0006](adr/0006-ui-stack-and-design-system-boundary.md) | UI stack (Tailwind v4, shadcn on Radix, Lucide, Geist) and the bounded design system |
 | [0007](adr/0007-theming-mechanism-and-browser-floor.md) | `light-dark()` theming and the `browserslist` floor |
 | [0008](adr/0008-test-strategy-and-tooling.md) | Vitest unit/db projects, Playwright, axe, real-DB harness |
 | [0009](adr/0009-ci-cd-pipeline.md) | CI jobs, blocking vs informational, deploy from Actions only |
 | [0010](adr/0010-toolchain-pinning-and-supply-chain.md) | pnpm, Node pin, exact versions, release-age policy, manual dependency updates |
 | [0011](adr/0011-validation-and-forms.md) | Zod and React Hook Form |
+| [0012](adr/0012-database-conventions.md) | Database conventions: uuid ids, naming, timestamps, `set_updated_at`, hard delete, schema-guard rules |
+| [0013](adr/0013-observability.md) | OpenTelemetry NodeSDK (off without an endpoint), own logger, local Grafana LGTM collector |
+| [0014](adr/0014-security-headers-and-csp.md) | Nonce CSP via `src/proxy.ts`, static security headers, dynamic rendering |
+| [0015](adr/0015-error-model-and-action-wrapper.md) | `AppError`, `Result<T>`, `defineAction`, database error mapping, reference code |
+| [0016](adr/0016-pagination.md) | Offset pagination: `listParams` (lib) and `paginate` (db) |
 
 ## Stack
 Next.js (App Router, strict TypeScript), Supabase Auth, PostgreSQL with RLS, Drizzle ORM (`postgres` driver), Tailwind CSS v4 with shadcn (Radix) components, Supabase CLI + Docker for local development and CI, Vercel deployment from GitHub Actions.
@@ -24,25 +29,30 @@ Next.js (App Router, strict TypeScript), Supabase Auth, PostgreSQL with RLS, Dri
 src/
   app/              routing only: pages, layouts, route handlers; calls module public APIs
     design/         the /design showcase (gated by DESIGN_PAGE_ENABLED); ordinary app code, no exemptions
+    global-error.tsx, error.tsx, not-found.tsx   error pages (ADR 0015), built on components/layout/StatusPage
     api/health/     liveness (/api/health); db/ readiness (/api/health/db) is the one app file that may import @/db
     globals.css     the ONE design-token file
   components/       shared UI, domain-free (docs/design-system.md section 0.3)
     ui/             shadcn-owned primitives actually used (Button, Input, Card, Sidebar, Sonner, ...)
     form/           FormField, PasswordInput (React Hook Form + ui/)
-    layout/         AuthLayout, AppShell, PageHeader, PageSkeleton
+    layout/         AuthLayout, AppShell, PageHeader, PageSkeleton, StatusPage
     brand/          wordmark and PRODUCT_NAME (the one place to rebrand)
   hooks/            shared client hooks (use-mobile.ts)
-  modules/<name>/   epic 002+: index.ts (public API), actions/, queries/, schemas/, components/, types.ts
-  db/               client.ts (private, lazy getDb()), rls.ts (withRls, withAnonymousRls), schema/ (generated), index.ts (public API)
-  lib/              env.ts (public), env.server.ts (server-only), utils.ts; domain-free
-  instrumentation.ts  startup env validation
+  modules/<name>/   epic 003+: index.ts (public API), actions/, queries/, schemas/, components/, types.ts
+  db/               client.ts (private, lazy getDb()), rls.ts (withRls, withAnonymousRls), paginate.ts, schema/ (generated), index.ts (public API)
+  lib/              env.ts (public), env.server.ts (server-only), utils.ts, errors.ts (AppError, Result), action.ts (defineAction),
+                    logger.ts (server-only), list-params.ts (pure Zod), csp.ts (policy builder); domain-free
+  instrumentation.ts  startup env validation, onRequestError hook; imports instrumentation.node.ts on the Node runtime
+  instrumentation.node.ts  OpenTelemetry NodeSDK, started only if an OTLP endpoint is set (ADR 0013)
+  proxy.ts          per-request CSP nonce (ADR 0014); epic 003 adds session refresh here
 tests/              db/ (real Postgres), e2e/ (Playwright), utils/ (harness); see tests/README.md
-scripts/            db-schema.mts (wrapper for `pnpm db:schema`)
+scripts/            db-schema.mts (wrapper for `pnpm db:schema`), gen-module.mts (`pnpm gen:module <name>`)
+docker/observability/  compose.yaml for the optional local Grafana LGTM collector (`pnpm obs:start` / `obs:stop`; not part of dev, tests or CI)
 supabase/           config.toml, migrations/ (SQL, source of truth), seed.sql
 ```
 Unit tests are colocated (`*.test.ts(x)` next to the file); database and E2E tests live under `tests/`.
 
-**Module folders.** A module is `src/modules/<name>/` and exposes its public API only through `src/modules/<name>/index.ts`. Epic 001 creates no module folder (no empty folders, no placeholder `index.ts`); `auth`, `users` and `tenants` arrive in epic 002 and create only the subfolders they need. Tables and inferred types are not module-owned: they come from `@/db` (ADR 0001). The Supabase Auth client factories (`@supabase/ssr`, Auth only) do not exist yet; epic 002 creates them and chooses their location. ADR 0001 and 0004 name `src/lib/supabase/` as the intended home; if epic 002 uses another place, it records that in the ADR.
+**Module folders.** A module is `src/modules/<name>/` and exposes its public API only through `src/modules/<name>/index.ts`. Epics 001 and 002 create no module folder (no empty folders, no placeholder `index.ts`); `auth`, `users` and `tenants` arrive in epic 003 and create only the subfolders they need. `pnpm gen:module <name>` (two-way door, no ADR) creates only `src/modules/<name>/index.ts` with `export {};` and a header comment: kebab-case name, never overwrites, no subfolders and no generated tests; subfolders are created when they have content (C1). Tables and inferred types are not module-owned: they come from `@/db` (ADR 0001). The Supabase Auth client factories (`@supabase/ssr`, Auth only) do not exist yet; epic 003 creates them and chooses their location. ADR 0001 and 0004 name `src/lib/supabase/` as the intended home; if epic 003 uses another place, it records that in the ADR.
 
 ## Dependency direction
 `app` -> module `index.ts` -> `@/db`, `@/lib`. `lib` imports neither `modules` nor `db`; `db` imports nothing from `modules`; `app` and components never import `@/db`; no cycles. Enforced by lint in CI (ADR 0001, section "Lint rules").
@@ -62,25 +72,29 @@ Unit tests are colocated (`*.test.ts(x)` next to the file); database and E2E tes
 - `next.config.ts` imports the public module (`./src/lib/env`, relative path), so `next build` fails on a missing `NEXT_PUBLIC_*` variable. Consequence: the three `NEXT_PUBLIC_*` variables are needed at build **and** at runtime (`next start`, CI, Vercel).
 - `DATABASE_URL` / `DATABASE_MIGRATION_URL` are required unless `NODE_ENV=production`; the lazy `getDb()` fails on first use when `DATABASE_URL` is missing.
 - `DESIGN_PAGE_ENABLED` (server-only, in `env.server.ts`; accepts `true`, `false`, `1`, `0`; blank counts as unset): unset means ON only when `NODE_ENV=development` and OFF otherwise, so it is absent on Vercel and every `/design*` route returns 404 there. `playwright.config.ts` sets it to `true` for the E2E server (project `design-gate-off` strips it to prove the 404). Never prefix it with `NEXT_PUBLIC_`.
+- `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL` and `OTEL_SERVICE_NAME` are declared and validated in `env.server.ts` (ADR 0013). The OpenTelemetry SDK reads the other `OTEL_*` variables (for example `OTEL_EXPORTER_OTLP_HEADERS`, which may carry credentials) from `process.env` itself; that is the one documented exception to C11, and our code never reads or logs them.
 - Tooling (`drizzle.config.ts`, `scripts/db-schema.mts`, Playwright and Vitest config, `tests/utils/local-env.mts`) reads `process.env` outside the app.
 
 ## Conventions
-Numbers C1 to C12 are stable: lint messages cite them (`eslint.config.mjs`). The "Lint rules" table below says which conventions are enforced mechanically.
+Numbers C1 to C15 are stable: lint messages cite them (`eslint.config.mjs`). The "Lint rules" table below says which conventions are enforced mechanically.
 
 | # | Convention | Detail |
 |---|------------|--------|
-| C1 | Layout | As in "Layout": `src/app` (routing only, thin), `src/modules/<name>/{actions,queries,schemas,components}` plus `index.ts` (public API) and `types.ts`, `src/db` (shared, generated schema, `withRls`), `src/lib` (domain-free), shared UI in `src/components` and `src/hooks`. Create only folders that have content; no empty module folders. Modules `auth`, `users`, `tenants` arrive in epic 002. |
+| C1 | Layout | As in "Layout": `src/app` (routing only, thin), `src/modules/<name>/{actions,queries,schemas,components}` plus `index.ts` (public API) and `types.ts`, `src/db` (shared, generated schema, `withRls`), `src/lib` (domain-free), shared UI in `src/components` and `src/hooks`. Create only folders that have content; no empty module folders. Modules `auth`, `users`, `tenants` arrive in epic 003 (not 002). |
 | C2 | kebab-case files | All file and folder names are kebab-case (`app-shell.tsx`, `use-mobile.ts`, `create-tenant.ts`). Next.js reserved names (`page.tsx`, `route.ts`, `layout.tsx`) are unchanged. Identifiers follow TypeScript norms (PascalCase components and types, camelCase functions). |
 | C3 | Named exports | No `export default` in our code. Exceptions are files a framework requires to be default (`page`, `layout`, `loading`, `error`, `not-found`, config files). Route handlers use named `GET` / `POST` exports. `index.ts` of a module re-exports its public API by name. |
 | C4 | `@/` alias | Cross-folder imports use `@/` (maps to `src/`). Inside one module or one component folder, use relative imports for its own files. No `../../..` chains that leave a module or a top-level folder. Exception: `next.config.ts` imports `./src/lib/env` by relative path because it loads outside the alias. |
 | C5 | Server Components by default | Add `"use client"` only for interactivity or browser APIs, at the smallest leaf possible. Client code may import only `publicEnv` (never `env.server.ts`), and never anything from `@/db`. A Server Component must not pass event handlers to a Client Component. |
-| C6 | Mutations via Server Actions with a typed result | Actions live in `modules/<name>/actions/` and return `{ ok: true, data } \| { ok: false, error }`; expected failures are returned, not thrown. An action re-checks the session with `supabase.auth.getUser()` and never relies on the UI or middleware. |
+| C6 | Mutations via Server Actions with a typed result | Actions live in `modules/<name>/actions/`, are built with `defineAction({ name, schema, handler })` (`src/lib/action.ts`) and return `Result<T>` = `{ ok: true, data } \| { ok: false, error: { type, message, fieldErrors?, ref? } }` with `type` one of `validation`, `not_found`, `forbidden`, `conflict`, `unexpected` (`src/lib/errors.ts`, ADR 0015); expected failures are returned, not thrown, and the wrapper rethrows framework control flow (`redirect()`, `notFound()`). An action re-checks the session with `supabase.auth.getUser()` and never relies on the UI or middleware. |
 | C7 | Zod at the boundary | Every external input (form data, action arguments, route handler body, query params) is parsed with a Zod schema from `modules/<name>/schemas/` before use; the parsed type is the only type passed on. Env is validated by `env.ts` / `env.server.ts` (ADR 0004). |
-| C8 | Error logging without PII | Server-side and structured (event name, error class or code, ids only). Never log secrets, tokens, passwords, emails, request bodies, connection strings or full error objects that may embed them (pattern: `src/app/api/health/db/route.ts` logs only `error.name`). Response bodies carry no internal detail. No observability tooling in the MVP; the single log call site is the seam. |
+| C8 | Error logging without PII | Server-side and structured (event name, error class or code, ids only). Never log secrets, tokens, passwords, emails, request bodies, connection strings or full error objects that may embed them (pattern: `src/app/api/health/db/route.ts` logs only `error.name`). Response bodies carry no internal detail. All server logging goes through `src/lib/logger.ts` (typed primitive fields, key deny-list, truncation, JSON lines, trace id from the active span); `console` is banned in `src` by ESLint except in the logger. Observability is OpenTelemetry, off unless an OTLP endpoint is set (ADR 0013). `onRequestError` logs only route path pattern, route type, method, error class, digest and database error code, never the request path, query string, headers or message. |
 | C9 | All queries use the `withRls` transaction | A query function in `queries/` receives the transaction handle `tx` passed by `withRls(ctx, fn)` (or `withAnonymousRls(fn)`) and uses only it, never `getDb()` or another handle. The raw client (`src/db/client.ts`) is private to `src/db`; never nest `withRls`, never use `sql.raw` outside `src/db/rls.ts`, never build SQL from request input, no external network call inside the callback, one `withRls` per use case (ADR 0003). The `VerifiedContext` must come from a verified session. |
-| C10 | One data path | `supabase-js` and `@supabase/ssr` are for Auth only (the client factories do not exist yet; epic 002 creates them and chooses their location); data goes through Drizzle. The Data API is disabled as a backstop (ADR 0003). |
-| C11 | Env access | Only `src/lib/env.ts` (public) and `src/lib/env.server.ts` (`server-only`) read `process.env`, plus the single `NEXT_RUNTIME` read in `src/instrumentation.ts` (the edge runtime must not load `server-only`). Tooling outside `src` (drizzle config, scripts, Playwright and Vitest config, `tests/`) is exempt (ADR 0004). |
+| C10 | One data path | `supabase-js` and `@supabase/ssr` are for Auth only (the client factories do not exist yet; epic 003 creates them and chooses their location); data goes through Drizzle. The Data API is disabled as a backstop (ADR 0003). |
+| C11 | Env access | Only `src/lib/env.ts` (public) and `src/lib/env.server.ts` (`server-only`) read `process.env`, plus the single `NEXT_RUNTIME` read in `src/instrumentation.ts` (the edge runtime must not load `server-only`) and the `OTEL_*` variables the OpenTelemetry SDK reads itself (ADR 0013; our three declared `OTEL_*` variables are validated in `env.server.ts`). Tooling outside `src` (drizzle config, scripts, Playwright and Vitest config, `tests/`) is exempt (ADR 0004). |
 | C12 | Commits | Conventional Commits, documented, not enforced. |
+| C13 | Database conventions | uuid ids, snake_case, plural tables, `<singular>_id` foreign keys, explicit `ON DELETE`, `created_at`/`updated_at timestamptz` with `set_updated_at()` trigger, hard delete, no audit columns (ADR 0012). Enforced by `tests/db/schema-guard.test.ts`. |
+| C14 | Security headers and CSP | Nonce CSP from `src/proxy.ts`, all pages dynamic; other headers static in `next.config.ts`; no CORS headers (ADR 0014). |
+| C15 | Lists | Parse query params with `listParams` and query with `paginate(tx, ...)` from `@/db` (ADR 0016). |
 
 ## Lint rules
 Every FND-FR-12 rule is an ESLint check that runs in `pnpm lint` and in CI (`fast` job). FND-T-37 implemented them in `eslint.config.mjs` (commit `5369669`); FND-T-38 proves each with an illegal and a legal fixture, and FND-T-61 extended rule (d) and the (b) test to relative `../db/client` and `../db/rls` imports from `src/lib`. Sources: spec FND-FR-12, ADR 0001 (rules 1 to 5 and amendment), ADR 0003.
@@ -96,6 +110,11 @@ Every FND-FR-12 rule is an ESLint check that runs in `pnpm lint` and in CI (`fas
 | (f) | supabase-js `.from()` / `.rpc()` data calls restricted | C10; ADR 0003 | `no-restricted-syntax` on every linted file: `CallExpression[callee.property.name='rpc']` and `CallExpression[callee.property.name='from'][arguments.0.type='Literal']:not([callee.object.name=/^(Array\|Buffer)$/])`. Drizzle also ends queries in `.from(table)` (an identifier), so only the string-literal form is banned | none. The disabled Data API (tested in `data-api-config.test.ts` and `hardening-catalog.test.ts`) is the backstop for forms a syntactic check cannot see. |
 | ADR 0003 | `sql.raw` only in `src/db/rls.ts` | C9 | `no-restricted-syntax` selector `CallExpression[callee.object.name='sql'][callee.property.name='raw']` on `src/**` | `src/db/rls.ts`; `tests/**` (SQL built from constants and generated table names). |
 | ADR 0004 | `process.env` only in the env modules | C11 | `no-restricted-properties` on `process.env` for `src/**`; off for `src/lib/env.ts` and `src/lib/env.server.ts`; in `src/instrumentation.ts` two selectors allow only `process.env.NEXT_RUNTIME` | `tests/**`, `scripts/`, root config files. |
+| ADR 0013 | No `console` in `src`; the logger is the only output path | C8 | `no-console` on `src/**`; off for `src/lib/logger.ts` | `tests/**`, `scripts/`. |
+| ADR 0012 | Database conventions on every `public` table | C13 | Not ESLint: new rules in `tests/db/schema-guard.test.ts` (uuid pk, timestamps, `set_updated_at` trigger, snake_case, FK columns indexed) with a named allowlist | Allowlist entries with a reason string. |
+| ADR 0014 | CSP and static headers present, no CORS headers, no `X-Powered-By` | C14 | Not ESLint: unit test of the policy builder; Playwright against `build` + `start` asserts headers on pages and error pages | none. |
+| ADR 0015 | Wrapper contract and error mapping | C6 | Not ESLint: unit tests (`defineAction` order, `unstable_rethrow`, `fromDbError`) and a `test:db` case for the real Drizzle `cause` shape | none. |
+| ADR 0016 | `paginate` honours RLS and ordering | C15 | Not ESLint: `test:db` cases (tiebreaker, equality filters, cross-tenant count) | none. |
 
 Generated `src/db/schema/schema.ts` and `relations.ts` are in `globalIgnores` (ADR 0002); other files importing them are still linted.
 
@@ -106,7 +125,7 @@ Generated `src/db/schema/schema.ts` and `relations.ts` are in `globalIgnores` (A
 2. Rule (c2) lists three folders (`app`, `components`, `hooks`): a new top-level folder under `src`, or a root file such as `src/instrumentation.ts`, importing `@/db` is not reported (verified with a virtual `src/instrumentation2.ts`).
 3. Module files nested deeper than four folders below a module are not checked by the "do not climb out" rule.
 4. Rule (f) reports `Uint8Array.from("ab")` (a false positive; only `Array` and `Buffer` are excluded) and misses a template-literal argument and a variable argument (``.from(`users`)``, `.from(name)`).
-These are convention (C4) violations as much as lint gaps, and none is reachable by the code that exists today. If they matter once epic 002 adds modules, the hardening is resolver-based: `import/no-restricted-paths` (same plugin, no new dependency) with zones `./src/lib` and `./src/db` against `./src/modules`, `./src/!(db|modules)/**` against `./src/db`, `./src/!(db)/**` against `./src/db/client.ts`, and one zone per directory found under `src/modules` with `except: ["./index.ts"]`. It resolves alias and relative imports alike. This was verified on a fixture tree (alias and relative imports reported, the health route allowed to import `@/db` but not `@/db/client`, new top-level folders covered). It is a follow-up for the orchestrator to schedule, not part of the accepted T-37.
+These are convention (C4) violations as much as lint gaps, and none is reachable by the code that exists today. If they matter once epic 003 adds modules, the hardening is resolver-based: `import/no-restricted-paths` (same plugin, no new dependency) with zones `./src/lib` and `./src/db` against `./src/modules`, `./src/!(db|modules)/**` against `./src/db`, `./src/!(db)/**` against `./src/db/client.ts`, and one zone per directory found under `src/modules` with `except: ["./index.ts"]`. It resolves alias and relative imports alike. This was verified on a fixture tree (alias and relative imports reported, the health route allowed to import `@/db` but not `@/db/client`, new top-level folders covered). It is a follow-up for the orchestrator to schedule, not part of the accepted T-37.
 
 **Testing the rules (for FND-T-38).** `no-restricted-imports`, `no-restricted-syntax` and `no-restricted-properties` need no files on disk, so `ESLint#lintText` with a virtual `filePath` inside the repo works. `import/no-cycle` crashes (`TypeError` in `scc`) when asked to lint virtual text whose import resolves to a real file, and needs real files to report a cycle: for rule (e) use real fixture files in a folder excluded from the normal lint and the build, or disable `import/no-cycle` in the virtual-text cases.
 
@@ -147,7 +166,7 @@ One workflow, `.github/workflows/ci.yml`, trigger `on: push` (no `pull_request`:
 
 **Concurrency.** Workflow group `ci-${{ github.ref }}` cancels in-progress runs on every ref except `main` (`cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}`), because cancelling a run cancels its jobs and could kill a deployment half-way. On `main` runs queue (one running, one pending; a newer pending run replaces the older one, so a middle commit may get no run of its own). The deploy job also has its own `deploy-production` group with cancel off.
 
-**Reduced Supabase stack.** CI starts only Postgres and Kong (`pnpm db:start -x gotrue,realtime,storage-api,...`). Nothing in epic 001 touches Auth, Realtime or Storage, so CI does not prove behaviour with them. Kong stays because the Data-API-disabled test expects a 503 from the gateway. **Epic 002 must remove `gotrue` from the exclusion list** (and the full list should be revisited) when Auth is exercised. The drift check is nearly vacuous with 0 tables and only protects once epic 002 adds tables. Supabase image versions and Postgres 17 come from the pinned Supabase CLI (3.1.0), so CI and local use the same images; images are pulled on every run.
+**Reduced Supabase stack.** CI starts only Postgres and Kong (`pnpm db:start -x gotrue,realtime,storage-api,...`). Nothing in epics 001 and 002 touches Auth, Realtime or Storage, so CI does not prove behaviour with them. Kong stays because the Data-API-disabled test expects a 503 from the gateway. **Epic 003 must remove `gotrue` from the exclusion list** (and the full list should be revisited) when Auth is exercised. The drift check is nearly vacuous with 0 tables and only protects once epic 003 adds tables. Supabase image versions and Postgres 17 come from the pinned Supabase CLI (3.1.0), so CI and local use the same images; images are pulled on every run.
 
 **Known limits.** Until `VERCEL_TOKEN` exists the deploy job is green and skipped, so a green badge does not mean "deployed". The health check runs after production was promoted (no rollback). `NEXT_PUBLIC_APP_URL` is a `localhost` placeholder in production. Dependabot covers only GitHub Actions: its npm updater runs Node 24 and the repo enforces `engines.node >=26.13.1` with `engineStrict`, so npm is not configured (it failed with ERR_PNPM_UNSUPPORTED_ENGINE); npm dependencies are updated manually.
 
