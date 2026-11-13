@@ -16,6 +16,13 @@ const GATED_PATHS = [
   "/design/frames/loading",
   "/design/frames/auth?theme=dark",
   "/design/anything-else",
+  // PH-AC-76 (E2E half): every fault fixture is gated too.
+  "/design/errors/page-throw",
+  "/design/errors/retry",
+  "/design/errors/not-found-page",
+  "/design/errors/route-throw",
+  "/design/errors/form",
+  "/design/errors/anything-else",
 ] as const;
 
 test.describe("design showcase gate (flag off)", () => {
@@ -37,6 +44,39 @@ test.describe("design showcase gate (flag off)", () => {
       page.getByRole("heading", { level: 1, name: /design/i }),
     ).toHaveCount(0);
     await expect(page.locator("iframe")).toHaveCount(0);
+  });
+
+  test("PH-AC-05: a gated route shows the 404 page without a reference code", async ({
+    page,
+  }) => {
+    const response = await page.goto("/design");
+
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Page not found",
+    );
+    await expect(page.getByText("Reference code")).toHaveCount(0);
+  });
+
+  test("PH-AC-76: a fault fixture page shows the 404 page in a browser", async ({
+    page,
+  }) => {
+    const response = await page.goto("/design/errors/page-throw?token=x");
+
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Page not found",
+    );
+  });
+
+  test("PH-AC-76: the root layout fault header has no effect when the flag is off", async ({
+    request,
+  }) => {
+    const response = await request.get("/", {
+      headers: { "x-fault": "root-layout" },
+    });
+
+    expect(response.status()).toBe(200);
   });
 
   test("FND-FR-17: the gate does not affect the home page", async ({
