@@ -23,6 +23,7 @@
     "**/*.ts",
     "**/*.tsx",
     "vitest.config.mts",
+    "scripts/**/*.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
