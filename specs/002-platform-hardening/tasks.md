@@ -24,7 +24,7 @@
 | PH-T-04 | Typed errors and `Result` | developer | 1 | T-01 | done |
 | PH-T-05 | `fromDbError` database error mapping | developer | 1 | T-04 | done |
 | PH-T-06 | Fault injection seam and `/design/errors` gate | developer | 1 | T-04 | done |
-| PH-T-07 | Fault route fixtures | developer | 1 | T-06 | todo |
+| PH-T-07 | Fault route fixtures | developer | 1 | T-06 | done |
 | PH-T-08 | `StatusPage` component, listed on `/design` | developer | 1 | T-01 | todo |
 | PH-T-09 | Design system doc: `StatusPage` | ui-ux-designer | 1 | T-08 | todo |
 | PH-T-10 | 500, global error and 404 pages | developer | 1 | T-08, T-04, T-07 | todo |
