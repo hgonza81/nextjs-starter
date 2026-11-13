@@ -19,9 +19,10 @@ export async function register(): Promise<void> {
  * filtering is needed here.
  *
  * Only `routePath` (the route pattern), `routeType`, `method`, the error class,
- * `digest` and the database error code are logged. `request.path` (carries the
- * query string), headers and the error message are never read: they can hold
- * personal data, tokens or SQL text.
+ * `digest`, the database error code and the request id are logged. The only
+ * header read is the request id (`pickRequestId`). `request.path` (carries the
+ * query string), the other headers and the error message are never read: they
+ * can hold personal data, tokens or SQL text.
  *
  * It must never throw, so a logging failure cannot change the response.
  */
@@ -33,8 +34,13 @@ export const onRequestError: Instrumentation.onRequestError = async (
   // The logger needs Node APIs; the edge runtime is not used by this app.
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   try {
-    const { logger } = await import("@/lib/logger");
-    await logger.exception("request.unhandled_error", error, {
+    const { createLogger, pickRequestId } = await import("@/lib/logger");
+    // `headers()` is not readable from this hook for route handlers, so the
+    // request id comes from the `request.headers` argument (PH-AC-70).
+    const requestLogger = createLogger({
+      readRequestId: async () => pickRequestId(request.headers),
+    });
+    await requestLogger.exception("request.unhandled_error", error, {
       routePath: context.routePath,
       routeType: context.routeType,
       method: request.method,

@@ -11,7 +11,13 @@ const log = vi.hoisted(() => ({
   error: vi.fn(),
   exception: vi.fn(),
 }));
-vi.mock("@/lib/logger", () => ({ logger: log }));
+// The hook builds its own logger so it can read the request id from its
+// `request.headers` argument (PH-T-63); the fake keeps the injected reader.
+const createLogger = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/logger", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/logger")>()),
+  createLogger,
+}));
 
 /**
  * PH-FR-05, PH-AC-11/58/60 (unit half): the `onRequestError` hook with fakes.
@@ -43,6 +49,7 @@ const entryCount = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  createLogger.mockReturnValue(log);
   vi.stubEnv("NEXT_RUNTIME", "nodejs");
 });
 
@@ -88,20 +95,26 @@ describe("PH-AC-58: only allowed fields are logged", () => {
     expect(serialized).not.toContain("secret");
   });
 
-  it("PH-AC-58: does not read request.path, headers or the error message", async () => {
+  it("PH-AC-58: does not read request.path or the error message, and reads only the request id headers", async () => {
     const reads: string[] = [];
-    const spy = (name: string, value: unknown) => ({
-      get [name]() {
-        reads.push(name);
-        return value;
-      },
-    });
-    const request = Object.defineProperties(
-      { method: "GET" },
+    const headerKeysRead: string[] = [];
+    const headers = new Proxy<Record<string, string>>(
+      { "x-request-id": "req-1", authorization: "Bearer secret-value" },
       {
-        ...Object.getOwnPropertyDescriptors(spy("path", "/x?token=x")),
-        ...Object.getOwnPropertyDescriptors(spy("headers", {})),
+        get(target, key) {
+          headerKeysRead.push(String(key));
+          return Reflect.get(target, key);
+        },
       },
+    );
+    const request = Object.defineProperties(
+      { method: "GET", headers },
+      Object.getOwnPropertyDescriptors({
+        get path() {
+          reads.push("path");
+          return "/x?token=x";
+        },
+      }),
     ) as HookArgs[1];
     const error = Object.defineProperty(new Error("x"), "message", {
       get() {
@@ -111,8 +124,15 @@ describe("PH-AC-58: only allowed fields are logged", () => {
     });
 
     await onRequestError(error, request, makeContext());
+    const [options] = createLogger.mock.calls[0] as [
+      { readRequestId: () => Promise<string | undefined> },
+    ];
+    const requestId = await options.readRequestId();
 
     expect(reads).toEqual([]);
+    expect(requestId).toBe("req-1");
+    expect(headerKeysRead).not.toContain("authorization");
+    expect(headerKeysRead.every((key) => key.startsWith("x-"))).toBe(true);
   });
 });
 

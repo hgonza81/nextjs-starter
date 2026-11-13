@@ -283,14 +283,9 @@ test.describe("PH-AC-70: the request id is read from the header, never generated
     expect(entry).toMatchObject({ event: HOOK_EVENT, request_id: requestId });
   });
 
-  // KNOWN PRODUCTION DEFECT (reported in PH-T-20): the hook logs route handler
-  // failures without `request_id`, although the request carried the header
-  // (pages and actions do carry it). `test.fail` keeps the suite green and
-  // turns red as soon as it is fixed, so the annotation must then be removed.
   test("PH-AC-70: a route handler failure carries the incoming x-request-id too", async ({
     request,
   }) => {
-    test.fail(true, "onRequestError cannot read request headers for routes");
     const requestId = unique("req-route");
 
     const response = await request.get(

@@ -5,7 +5,7 @@
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { installTestTracing } from "../../tests/utils/otel-test-tracer";
-import { createLogger, type LoggerOptions } from "./logger";
+import { createLogger, pickRequestId, type LoggerOptions } from "./logger";
 
 const FIXED = new Date("2026-01-02T03:04:05.678Z");
 
@@ -330,5 +330,16 @@ describe("PH-AC-72: the logger never affects the caller", () => {
     await expect(
       log.info("evt", { circular } as never),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("PH-AC-70: pickRequestId", () => {
+  it("PH-AC-70: prefers x-request-id, falls back to x-vercel-id, else undefined", () => {
+    expect(pickRequestId({ "x-request-id": "a", "x-vercel-id": "b" })).toBe(
+      "a",
+    );
+    expect(pickRequestId({ "x-vercel-id": "b" })).toBe("b");
+    expect(pickRequestId({ "x-request-id": ["c", "d"] })).toBe("c");
+    expect(pickRequestId({ cookie: "sid=1" })).toBeUndefined();
   });
 });

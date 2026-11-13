@@ -120,6 +120,24 @@ const readRequestIdFromNext = async (): Promise<string | undefined> => {
   return undefined;
 };
 
+/**
+ * Picks the request id (`x-request-id`, then `x-vercel-id`) out of a plain
+ * header dictionary, ignoring every other header. For callers that receive the
+ * headers as an argument instead of through `headers()`, e.g. `onRequestError`
+ * (where `headers()` is not readable for route handlers, PH-T-63). Node
+ * lowercases incoming header names; an array value uses its first element.
+ */
+export function pickRequestId(
+  incoming: Readonly<Record<string, string | string[] | undefined>>,
+): string | undefined {
+  for (const name of REQUEST_ID_HEADERS) {
+    const raw = incoming[name];
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (value) return value;
+  }
+  return undefined;
+}
+
 const readTraceIds = (): LogFields => {
   const spanContext = trace.getActiveSpan()?.spanContext();
   if (spanContext === undefined || !isSpanContextValid(spanContext)) return {};
