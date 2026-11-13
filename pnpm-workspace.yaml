@@ -11,3 +11,7 @@ minimumReleaseAgeExclude:
   - prettier@3.10.1
   - "@testing-library/user-event@14.6.10"
 saveExact: true
+# minimumReleaseAge: versions younger than 24 hours (1440 minutes) are not
+# installed (supply-chain delay, ADR 0010). Set explicitly so the policy does
+# not depend on the pnpm default.
+minimumReleaseAge: 1440

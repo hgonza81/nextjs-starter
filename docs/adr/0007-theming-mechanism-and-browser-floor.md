@@ -1,11 +1,11 @@
 # 0007. Theming mechanism and browser support floor
 
-Status: Proposed
+Status: Accepted
 Date: 2026-11-12
 Epic: 001-foundations
 
 ## Context
-The PO decided light and dark themes that follow the system setting, with no toggle (questions.md Q12 B, spec D14). The mechanism was chosen by the ui-ux-designer and architect in `docs/design-system.md` 2.1 and implemented in FND-T-29; the PO has not been asked about the browser support it implies. Architecture.md previously called the mechanism a two-way door. It is recorded here because it sets a browser floor that is a product-visible support policy, and because the build breaks if the floor is lowered.
+The PO decided light and dark themes that follow the system setting, with no toggle (questions.md Q12 B, spec D14). The mechanism was chosen by the ui-ux-designer and architect in `docs/design-system.md` 2.1 and implemented in FND-T-29; the browser support it implies was accepted by the PO afterwards (see Decision follow-up). Architecture.md previously called the mechanism a two-way door. It is recorded here because it sets a browser floor that is a product-visible support policy, and because the build breaks if the floor is lowered.
 
 ## Options considered
 1. **CSS `light-dark()` per token, `color-scheme: light dark` on `:root`, no JavaScript, no class.** Pros: one declaration per token (no two blocks that drift), no flash on first paint, no provider, native controls follow `color-scheme`, `/design` can show both themes side by side with `data-theme` panels, a future manual toggle only sets `color-scheme`. Cons: requires Baseline 2024 browsers.
@@ -22,8 +22,8 @@ Option 1 (design-system.md 2.1, FND-FR-15; verified by E2E: dark first paint wor
 - Negative: browsers older than the floor (about mid-2024) are not supported. This is the point that needs the PO.
 - Revisit if analytics or a customer require older browsers: then switch to option 2 or 3 by editing only `globals.css`, since components use semantic tokens.
 
-## Question for the Product Owner
-Is a floor of Chrome/Edge 123, Firefox 120, Safari 17.5 (roughly mid-2024 and later) acceptable for a B2B SaaS starter? Recommended default: yes (accept). If yes, this ADR becomes Accepted.
+## Decision follow-up
+The Product Owner accepted the browser floor of Chrome/Edge 123, Firefox 120 and Safari 17.5 (roughly mid-2024 and later) on 2026-11-12, so this ADR is Accepted.
 
 ## References
 - `docs/design-system.md` 2.1 and 0.2, `docs/architecture.md` (Design system), `docs/adr/0004-env-and-secrets.md` (amendment FND-T-36), `specs/001-foundations/acceptance/step-7.md` (D14 met).
