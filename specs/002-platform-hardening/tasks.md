@@ -42,7 +42,7 @@
 | PH-T-22 | Accept step 1 | product-manager | 1 | T-21 | done |
 | PH-T-23 | Spike: `sdk-node` under Turbopack and Node 26, package versions | developer | 2 | T-22 | done |
 | PH-T-24 | `OTEL_*` variables in `env.server.ts` | developer | 2 | T-23 | done |
-| PH-T-25 | SDK bootstrap, trace export, metrics pipeline | developer | 2 | T-24 | todo |
+| PH-T-25 | SDK bootstrap, trace export, metrics pipeline | developer | 2 | T-24 | done |
 | PH-T-26 | Logger bridge to OpenTelemetry logs | developer | 2 | T-25 | todo |
 | PH-T-27 | Local collector: compose file, scripts, documented variables | developer | 2 | T-24, T-25 (sequential: both edit `package.json`) | todo |
 | PH-T-28 | Tests: env schema, telemetry off, bad-variable process test | tester | 2 | T-25 | todo |
