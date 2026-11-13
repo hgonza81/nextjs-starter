@@ -210,7 +210,10 @@ test.describe("route handler", () => {
   });
 });
 
-// Serial: the tests count entries of the same route and type ("action").
+// Serial among themselves. Entries are matched by a unique `x-request-id`, not
+// by digest or whole-route counts: the digest of an action error is the same
+// for every occurrence of the same message, and leakage-and-request-id.spec.ts
+// triggers the same actions in parallel (PH-T-20).
 test.describe("actions", () => {
   test.describe.configure({ mode: "serial" });
   const FORM = "/design/errors/form";
@@ -218,11 +221,9 @@ test.describe("actions", () => {
   test("PH-AC-09: an unwrapped action that throws logs exactly one hook entry and the caller gets a generic error", async ({
     page,
   }) => {
+    const requestId = `req-ac09-${randomUUID()}`;
+    await page.setExtraHTTPHeaders({ "x-request-id": requestId });
     await page.goto(FORM);
-    const before = countEntries(await readLogEntries(), {
-      routePath: FORM,
-      routeType: "action",
-    });
 
     await page.getByRole("button", { name: "Throwing action" }).click();
 
@@ -230,11 +231,13 @@ test.describe("actions", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Something went wrong" }),
     ).toBeVisible();
-    const code = await readReferenceCode(page);
+    await readReferenceCode(page);
     await expect
-      .poll(async () => (await findLogEntries({ digest: code })).length)
+      .poll(
+        async () => (await findLogEntries({ request_id: requestId })).length,
+      )
       .toBe(1);
-    const [entry] = await findLogEntries({ digest: code });
+    const [entry] = await findLogEntries({ request_id: requestId });
     expect(entry).toMatchObject({
       event: HOOK_EVENT,
       level: "error",
@@ -243,36 +246,31 @@ test.describe("actions", () => {
       method: "POST",
       error_name: "Error",
     });
+    expect(entry?.digest).toBe(await readReferenceCode(page));
     expect(JSON.stringify(entry)).not.toContain("Injected action fault");
     expect(await page.locator("body").innerText()).not.toContain(
       "Injected action fault",
     );
+    await captureSentinel(page);
+    // The sentinel above carries the same request id (a render entry).
     expect(
-      countEntries(await readLogEntries(), {
-        routePath: FORM,
-        routeType: "action",
-      }) - before,
-    ).toBe(1);
+      await findLogEntries({ request_id: requestId, routeType: "action" }),
+    ).toHaveLength(1);
   });
 
   test("PH-AC-60: an action that calls redirect() navigates and writes no entry", async ({
     page,
   }) => {
+    const requestId = `req-ac60-${randomUUID()}`;
+    await page.setExtraHTTPHeaders({ "x-request-id": requestId });
     await page.goto(FORM);
-    const before = countEntries(await readLogEntries(), {
-      routePath: FORM,
-      routeType: "action",
-    });
 
     await page.getByRole("button", { name: "Redirecting action" }).click();
     await expect(page).toHaveURL(new RegExp(`${FORM}$`));
     await captureSentinel(page);
 
     expect(
-      countEntries(await readLogEntries(), {
-        routePath: FORM,
-        routeType: "action",
-      }),
-    ).toBe(before);
+      await findLogEntries({ request_id: requestId, routeType: "action" }),
+    ).toEqual([]);
   });
 });
