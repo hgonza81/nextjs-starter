@@ -20,7 +20,7 @@
 |----|-------|----------|------|------------|--------|
 | PH-T-01 | Spike: Drizzle `cause`, `"use server"` export, hook on `redirect`/`notFound`, 500 under `connection()`, digest | developer | 1 | none | done |
 | PH-T-02 | Structured logger | developer | 1 | T-01 | done |
-| PH-T-03 | `no-console` lint rule and health route on the logger | developer | 1 | T-02 | todo |
+| PH-T-03 | `no-console` lint rule and health route on the logger | developer | 1 | T-02 | done |
 | PH-T-04 | Typed errors and `Result` | developer | 1 | T-01 | todo |
 | PH-T-05 | `fromDbError` database error mapping | developer | 1 | T-04 | todo |
 | PH-T-06 | Fault injection seam and `/design/errors` gate | developer | 1 | T-04 | todo |
