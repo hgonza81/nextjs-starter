@@ -47,7 +47,7 @@
 | PH-T-27 | Local collector: compose file, scripts, documented variables | developer | 2 | T-24, T-25 (sequential: both edit `package.json`) | done |
 | PH-T-28 | Tests: env schema, telemetry off, bad-variable process test | tester | 2 | T-25 | done |
 | PH-T-29 | E2E: telemetry with receiver and closed port | tester | 2 | T-26, T-13, T-64 | done |
-| PH-T-30 | Manual check of the collector | tester | 2 | T-26, T-27 | todo |
+| PH-T-30 | Manual check of the collector | tester | 2 | T-26, T-27 | done |
 | PH-T-31 | Architect check of step 2 and ADR 0013 confirmation | architect | 2 | T-28, T-29, T-30 | todo |
 | PH-T-32 | Accept step 2 | product-manager | 2 | T-31 | todo |
 | PH-T-33 | Spike: nonce reaches Next scripts, `global-error` nonce, proxy on Node, 413 | developer | 3 | T-32 | todo |
