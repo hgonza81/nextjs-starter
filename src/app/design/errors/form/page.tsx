@@ -2,6 +2,7 @@ import {
   oversizedBodyAction,
   redirectAction,
   throwingAction,
+  wrappedFaultAction,
 } from "@/app/design/errors/actions";
 
 /**
@@ -24,6 +25,16 @@ export default function FaultFormPage() {
         <textarea id="payload" name="payload" />
         <button type="submit">Send payload</button>
       </form>
+
+      {(["unexpected", "conflict", "redirect", "not-found"] as const).map(
+        (mode) => (
+          <form key={mode} action={wrappedFaultAction}>
+            <input type="hidden" name="token" value="form" />
+            <input type="hidden" name="mode" value={mode} />
+            <button type="submit">Wrapped action: {mode}</button>
+          </form>
+        ),
+      )}
 
       <form action={redirectAction}>
         <button type="submit">Redirecting action</button>
