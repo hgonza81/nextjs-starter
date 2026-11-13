@@ -30,6 +30,7 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
       { token: "--card-foreground", swatchClass: "bg-card-foreground" },
       { token: "--popover", swatchClass: "bg-popover" },
       { token: "--popover-foreground", swatchClass: "bg-popover-foreground" },
+      { token: "--canvas", swatchClass: "bg-canvas" },
       { token: "--muted", swatchClass: "bg-muted" },
       { token: "--muted-foreground", swatchClass: "bg-muted-foreground" },
       { token: "--accent", swatchClass: "bg-accent" },
@@ -126,6 +127,12 @@ export type ContrastPair = TextContrastPair | ComponentContrastPair;
 
 /** The pairs of the contrast table in design system 2.2. */
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
+  {
+    foreground: "--foreground",
+    background: "--canvas",
+    minimum: 4.5,
+    sampleClass: "text-foreground bg-canvas",
+  },
   {
     foreground: "--foreground",
     background: "--background",

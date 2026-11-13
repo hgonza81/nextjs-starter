@@ -15,7 +15,7 @@ function buildNavGroups(theme: Theme | undefined): readonly NavGroup[] {
   const icon = <LayoutDashboard className="size-5" aria-hidden />;
   return [
     {
-      label: "Workspace",
+      label: "Company",
       items: [
         { href: frameHref("app-shell", theme), label: "Dashboard", icon },
         { href: frameHref("loading", theme), label: "Reports", icon },

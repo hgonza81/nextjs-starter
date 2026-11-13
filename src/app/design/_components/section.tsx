@@ -91,10 +91,22 @@ export function ThemePanel({
   );
 }
 
-/** Side by side from `lg` up, stacked below it (design system 12.2). */
-export function ThemeGrid({ children }: { children: ReactNode }) {
+/**
+ * Side by side from `lg` up, stacked below it (design system 12.2). With
+ * `isStacked` the panels stay in one column at every width, for content that
+ * needs the full page width (the 1280px layout frames).
+ */
+export function ThemeGrid({
+  isStacked = false,
+  children,
+}: {
+  isStacked?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <div className={cn("grid items-start gap-6 lg:grid-cols-2")}>
+    <div
+      className={cn("grid items-start gap-6", !isStacked && "lg:grid-cols-2")}
+    >
       {children}
     </div>
   );

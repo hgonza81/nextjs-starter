@@ -23,7 +23,7 @@ type AuthLayoutProps = {
 
 /**
  * The one layout for sign-up, login and later reset flows (design system 5.1):
- * wordmark above a centered card on a muted background. The card area is the
+ * wordmark above a centered card on the canvas background. The card area is the
  * `main` landmark and its title is the page `h1`.
  */
 export function AuthLayout({
@@ -33,7 +33,7 @@ export function AuthLayout({
   footer,
 }: AuthLayoutProps) {
   return (
-    <div className="flex min-h-dvh flex-col items-center gap-6 bg-muted px-4 py-8 md:justify-center md:py-12">
+    <div className="flex min-h-dvh flex-col items-center gap-6 bg-canvas px-4 py-8 md:justify-center md:py-12">
       <header>
         <Link href="/" className="rounded-sm text-xl focus-ring">
           <Wordmark />

@@ -42,7 +42,7 @@ export function ButtonSamples() {
                     {variant} disabled
                   </Button>
                   <Button variant={variant} size={size} isLoading>
-                    Saving...
+                    Saving…
                   </Button>
                 </div>
               ))}

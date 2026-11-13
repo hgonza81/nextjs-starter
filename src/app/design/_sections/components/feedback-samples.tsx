@@ -14,7 +14,7 @@ export function SpinnerSkeletonSamples() {
   return (
     <Subsection
       title="Spinner and Skeleton"
-      description="Under prefers-reduced-motion the spinner is static and the skeleton does not pulse. Loading is never shown by motion alone: standalone spinners are named Loading and skeleton regions carry one hidden Loading... text."
+      description="Under prefers-reduced-motion the spinner is static and the skeleton does not pulse. Loading is never shown by motion alone: standalone spinners are named Loading and skeleton regions carry one hidden Loading… text."
     >
       <ThemePair>
         <Sample label="Spinner sizes: sm (16), md (20), lg (24)">
@@ -26,7 +26,7 @@ export function SpinnerSkeletonSamples() {
         </Sample>
         <Sample label="Skeleton shapes: page header, then card">
           <div aria-busy="true" className="flex flex-col gap-4">
-            <span className="sr-only">Loading...</span>
+            <span className="sr-only">Loading…</span>
             <div className="flex flex-col gap-2">
               <Skeleton className="h-8 w-48" />
               <Skeleton className="h-4 w-72 max-w-full" />

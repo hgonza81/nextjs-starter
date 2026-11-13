@@ -142,3 +142,28 @@ for (const width of [375, 1280]) {
     });
   });
 }
+
+// FND-T-58 M5: PageHeader owns the full-width mobile action.
+for (const { width, isFull } of [
+  { width: 375, isFull: true },
+  { width: 1280, isFull: false },
+]) {
+  test(`FND-FR-16: PageHeader primary action ${isFull ? "spans" : "does not span"} its container at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto(FRAME);
+
+    const action = page.getByRole("button", { name: "New report" });
+    const widths = await action.evaluate((button) => ({
+      button: button.getBoundingClientRect().width,
+      container: button.parentElement?.getBoundingClientRect().width ?? 0,
+    }));
+
+    if (isFull) {
+      expect(widths.button).toBeCloseTo(widths.container, 0);
+    } else {
+      expect(widths.button).toBeLessThan(widths.container);
+    }
+  });
+}

@@ -58,9 +58,9 @@ export function LayoutsSection() {
     <Section
       id="layouts"
       title="Layouts"
-      description="The real auth layout, app shell (with PageHeader) and loading page, each in a frame of a fixed width (375, 768 and 1280px) so the layout reacts to its own viewport. At 375px, open the drawer with the Open navigation button inside the app shell frame. The shell sample has a very long company name and two nav groups."
+      description="The real auth layout, app shell (with PageHeader) and loading page, each in a frame of a fixed width (375, 768 and 1280px) so the layout reacts to its own viewport. At 375px, open the drawer with the Open navigation button inside the app shell frame. The shell sample has a very long company name and two nav groups. The themes are stacked so each frame has the full page width; a frame wider than the page scrolls horizontally."
     >
-      <ThemeGrid>
+      <ThemeGrid isStacked>
         {THEMES.map((theme) => (
           <ThemePanel key={theme} theme={theme}>
             {FRAMES.map(({ slug, title }) =>

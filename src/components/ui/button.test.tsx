@@ -22,10 +22,10 @@ describe("Button", () => {
     const onClick = vi.fn();
     render(
       <Button isLoading onClick={onClick}>
-        Creating account...
+        Creating account…
       </Button>,
     );
-    const button = screen.getByRole("button", { name: "Creating account..." });
+    const button = screen.getByRole("button", { name: "Creating account…" });
 
     await user.tab();
     await user.click(button);
@@ -46,7 +46,7 @@ describe("Button", () => {
       <form onSubmit={onSubmit}>
         <input aria-label="Name" />
         <Button type="submit" isLoading>
-          Saving...
+          Saving…
         </Button>
       </form>,
     );

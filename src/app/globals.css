@@ -44,6 +44,8 @@
   --card-foreground: light-dark(#0a0a0a, #fafafa);
   --popover: light-dark(#ffffff, #171717);
   --popover-foreground: light-dark(#0a0a0a, #fafafa);
+  /* Page behind cards on the auth layout: cards stay lighter than it in both themes. */
+  --canvas: light-dark(#f5f5f5, #0a0a0a);
   --muted: light-dark(#f5f5f5, #262626);
   --muted-foreground: light-dark(#636363, #a1a1a1);
   /* shadcn naming: --accent is a NEUTRAL hover surface, not the brand color. */
@@ -165,6 +167,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-canvas: var(--canvas);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);

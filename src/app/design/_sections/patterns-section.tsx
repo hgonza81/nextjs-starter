@@ -23,20 +23,18 @@ export function PatternsSection() {
               aria-hidden
             />
             <div className="flex flex-col gap-2">
-              <h4 className="text-lg font-semibold">Your dashboard is empty</h4>
+              <h3 className="text-lg font-semibold">Your dashboard is empty</h3>
               <p className="max-w-xs text-sm text-muted-foreground">
-                Add your first project to see it here.
+                Things you add to your company will show up here.
               </p>
             </div>
-            <Button>Add project</Button>
           </Card>
         </Sample>
         <Sample label="Form-level error Alert above the first field">
           <form noValidate className="flex flex-col gap-6">
             <Alert variant="destructive">
               <AlertDescription>
-                We could not log you in. Check your email and password and try
-                again.
+                Incorrect email or password. Check your details and try again.
               </AlertDescription>
             </Alert>
             <FieldSample label="Email" defaultValue="name@company.com" />

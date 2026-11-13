@@ -140,7 +140,7 @@ test.describe("Button live states on /design", () => {
   test("FND-FR-16: a loading Button keeps focus, exposes aria-disabled and ignores click and Enter", async ({
     page,
   }) => {
-    const button = page.getByRole("button", { name: "Saving..." }).first();
+    const button = page.getByRole("button", { name: "Saving…" }).first();
     await recordClicks(page);
     const before = await background(button);
 
@@ -163,7 +163,7 @@ test.describe("Button live states on /design", () => {
   test("FND-FR-16: a loading Button does not change color on hover", async ({
     page,
   }) => {
-    const button = page.getByRole("button", { name: "Saving..." }).first();
+    const button = page.getByRole("button", { name: "Saving…" }).first();
     const before = await background(button);
 
     await button.hover();

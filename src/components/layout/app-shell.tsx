@@ -46,7 +46,7 @@ export function AppShell({
       {/* First focusable element; visible only while focused. */}
       <a
         href={`#${MAIN_CONTENT_ID}`}
-        className="sr-only rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground shadow-md focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-toast focus-ring"
+        className="sr-only rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground shadow-md focus:not-sr-only focus:fixed focus:px-4 focus:py-2 focus:top-4 focus:left-4 focus:z-toast focus-ring"
       >
         Skip to main content
       </a>

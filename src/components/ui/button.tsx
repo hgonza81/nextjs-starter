@@ -53,7 +53,7 @@ type ButtonProps = ComponentProps<"button"> &
      * Loading state (design system 4.1): `aria-disabled` instead of `disabled`
      * so focus is kept, clicks and Enter are ignored (no double submit), and a
      * decorative Spinner precedes the label. The caller switches the label to
-     * its progressive form ("Creating account...").
+     * its progressive form ("Creating account…").
      */
     isLoading?: boolean;
   };
