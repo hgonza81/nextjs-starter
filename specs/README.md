@@ -5,7 +5,7 @@ Each big block of functionality (an "epic") lives in its own numbered folder. Ep
 | # | Epic | Summary | Status |
 |---|------|---------|--------|
 | 001 | [foundations](001-foundations/requirements.md) | Basic Next.js skeleton, Supabase database + CLI, Docker, frontend stack and design system, testing, CI/CD and security checks. Many decisions still open. | Done (see [final acceptance](001-foundations/acceptance/final.md)) |
-| 002 | [platform-hardening](002-platform-hardening/requirements.md) | Foundations that remain before the first module: error handling, structured logging and OpenTelemetry, security headers, database conventions, module scaffold. No cloud. | Spec approved; 62 tasks drafted, awaiting Product Owner approval of the tasks |
+| 002 | [platform-hardening](002-platform-hardening/requirements.md) | Foundations that remain before the first module: error handling, structured logging and OpenTelemetry, security headers, database conventions, module scaffold. No cloud. | Spec and 62 tasks approved; in implementation (step 1) |
 | 003 | [auth-memberships](003-auth-memberships/requirements.md) | Sign-up, login, empty dashboard, tenants and memberships | High-level requirements (to be re-reviewed under the new workflow; depends on 002) |
 
 > **Renumbering note (2026-11-13):** auth and memberships was first planned as epic 002 and is now epic 003. Mentions of "epic 002" in the epic 001 documents, ADRs 0001-0011 and older code comments mean what is now 003-auth-memberships. They are left as written to preserve history.

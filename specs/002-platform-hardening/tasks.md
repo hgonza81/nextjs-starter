@@ -1,6 +1,6 @@
 # 002 - Platform hardening: tasks
 
-**Status:** Approved (spec approved by the Product Owner on 2026-11-13; ready to execute after the tasks themselves are approved)
+**Status:** Approved (spec and tasks approved by the Product Owner on 2026-11-13; execution started)
 **Spec:** [spec.md](spec.md) (Draft, round 2 fixes applied 2026-11-13). IDs: `PH-T-NN`; requirements `PH-FR-NN` / `PH-NFR-NN`; criteria `PH-AC-NN` (section 8 of the spec plus `flows.md` section 6).
 **Execution rules** (`specs/README.md`, "Task execution"): every task is run by a NEW agent with a fresh context, sequentially by default, hand-off through files only. The orchestrator updates the Status column after each task. A task that fails verification is not reopened in place: the orchestrator adds a fix task (next free ID) for a new agent and re-runs the verification.
 
