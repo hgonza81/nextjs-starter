@@ -40,7 +40,7 @@
 | PH-T-20 | E2E: no leakage, wrapper logging, request id | tester | 1 | T-11, T-12, T-13 | done |
 | PH-T-21 | Architect check of step 1 and ADR 0015 / 0013 confirmation | architect | 1 | T-14 to T-20, T-63 | done |
 | PH-T-22 | Accept step 1 | product-manager | 1 | T-21 | done |
-| PH-T-23 | Spike: `sdk-node` under Turbopack and Node 26, package versions | developer | 2 | T-22 | todo |
+| PH-T-23 | Spike: `sdk-node` under Turbopack and Node 26, package versions | developer | 2 | T-22 | done |
 | PH-T-24 | `OTEL_*` variables in `env.server.ts` | developer | 2 | T-23 | todo |
 | PH-T-25 | SDK bootstrap, trace export, metrics pipeline | developer | 2 | T-24 | todo |
 | PH-T-26 | Logger bridge to OpenTelemetry logs | developer | 2 | T-25 | todo |
