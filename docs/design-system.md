@@ -770,9 +770,57 @@ The shadcn Sidebar installs internal dependencies (Sheet for the mobile drawer, 
 +---------------------------------------------+
 ```
 
-### 7.4 Error pages (documented only, not built in epic 001)
+### 7.4 Error pages (built: `StatusPage`)
 
-404 and unexpected-error pages use the auth-layout pattern (wordmark, centered card or plain block): an h1 ("Page not found" / "Something went wrong"), one sentence, one Button ("Go to dashboard" / "Try again"). Built by the first epic that needs a custom one.
+The 500, global error and 404 pages share one component, `StatusPage` (`src/components/layout/status-page.tsx`), shown on `/design` (section "Status page"). It is presentational on purpose: no `next/link`, hooks or providers, so it is safe inside `global-error`, which replaces the root layout. Callers pass the actions (Buttons or plain anchors).
+
+```
++---------------------------------------------+
+|                 [Wordmark]                  |  text-xl
+|            Something went wrong             |  h1, text-2xl semibold, break-words
+|   We hit an unexpected problem. You can     |  text-base muted-foreground
+|   try again, or come back in a few minutes. |
+|               Reference code                |  text-sm muted-foreground
+|              [ 1234567890 ]                 |  font-mono text-sm, bg-muted pill, select-all, break-all
+|   If it keeps happening, quote this code    |  text-sm muted-foreground
+|   when you report it.                       |
+|     [ Try again ]  [ Go to home page ]      |  primary + outline
++---------------------------------------------+
+```
+
+**Anatomy.** Centered column (`max-w-md`, `gap-6`, padding `px-4 py-6`, `md:px-6 md:py-8`), full viewport height with content vertically centered (`min-h-dvh`), on `bg-background`. Order: Wordmark, heading and description, optional reference code block, actions. The root element is `main`.
+
+**Props.**
+
+| Prop | Purpose |
+|------|---------|
+| `title` | The heading text (h1). |
+| `description` | One short sentence. |
+| `referenceCode` | Optional. When absent, the whole block (label, code and hint) is omitted, never an empty label. |
+| `actions` | Slot for Buttons or links. Stacked full width below `sm`, a row from `sm`. |
+| `titleRef` | Optional ref to the heading, so a client error page can focus it on mount. The component stays hook-free; the focus effect belongs to the caller. The heading has `tabIndex={-1}`: focusable by script, never a Tab stop. It keeps the shared `focus-ring`. |
+| `isEmbedded` | Optional. Renders a `div` instead of `main`, an `h3` instead of the h1, and no full-height layout. Only for samples inside another page (`/design`), so the host page keeps one h1 and a valid heading order. Real pages never set it. |
+
+**Copy** (sentence case, no blame, never show the error message, stack or path):
+
+| Element | 500 and global error | 404 |
+|---------|----------------------|-----|
+| Document title and h1 | Something went wrong | Page not found |
+| Description | We hit an unexpected problem. You can try again, or come back in a few minutes. | The page you're looking for doesn't exist or may have moved. |
+| Code label | Reference code | none |
+| Code hint | If it keeps happening, quote this code when you report it. | none |
+| Primary action | Try again | Go to home page |
+| Secondary action | Go to home page (outline) | none |
+
+"Go to home page" replaces the earlier "Go to dashboard" until the app has a dashboard destination of its own.
+
+**Reference code.** Real text (never an image) in `font-mono text-sm text-foreground` on a `bg-muted` rounded pill, label above in `muted-foreground`. `select-all` makes one click or tap select the whole code so native copy works; there is no copy button, toast or clipboard API. `break-all` keeps a long value inside 375px. The code is the framework `error.digest`; it holds no personal data.
+
+**Actions.** The home action is a link styled as a Button (`asChild`); in `global-error` it is a plain `<a href="/">` (full reload, since the router may be broken). Tab order: Try again, then Go to home page. No `role="alert"` on the page (too noisy).
+
+**Accessibility.** One h1 per page and no other headings; the wordmark sits inside `main`. Client error pages (`error.tsx`, `global-error.tsx`) focus the h1 on mount through `titleRef`, which announces the page change and gives keyboard users a sensible starting point; a failed retry re-mounts the page and re-announces it. `not-found` is a server render and needs no focus handling. Targets follow Button sizes (44px below `md`, 40px from `md`). Colors are tokens only, so light and dark both work without `dark:` utilities.
+
+**States.** Default; code unavailable (code block omitted); retry (no spinner, `reset()` re-renders at once); narrow (text wraps, buttons stack, no horizontal scroll at 375px). Loading, empty and disabled do not apply.
 
 ## 8. Content and tone
 
