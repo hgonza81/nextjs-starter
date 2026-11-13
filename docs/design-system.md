@@ -23,11 +23,11 @@ Requirement trace: FND-FR-14 to FND-FR-18, FND-NFR-03, FND-NFR-04; decisions D12
 | shadcn/ui CLI | `shadcn@latest` (CLI v4 series). **Important: since July 2026 `shadcn init` pre-selects Base UI. We use Radix, so init must be run with `-b radix`** (`pnpm dlx shadcn@latest init -b radix`). | ui.shadcn.com changelog, "Base UI as the Default" |
 | Radix | Via shadcn's unified `radix-ui` package (changelog, February 2026). Developer confirms what `init -b radix` installs. | |
 | Toast | **Sonner** through shadcn's `sonner` component (`pnpm dlx shadcn@latest add sonner`), mounted once in the root layout. shadcn also ships a newer "Toast" component, but it is for Base UI projects only; we do not use it. | ui.shadcn.com/docs/components/radix/sonner |
-| Font | **Geist** (variable) via `next/font/google`, exposed as a CSS variable. Geist is a Google Fonts family; if it is unavailable in the pinned Next.js version, use Inter, which is documented. | nextjs.org/docs/app/api-reference/components/font |
+| Font | **Geist** (variable) from the `geist` package (`geist/font/sans`, which uses `next/font/local` over a bundled variable woff2), exposed as a CSS variable. Not `next/font/google`: that fetches the font at build time, so a build or an E2E run would fail offline, while the package version is pinned in the lockfile and the build is reproducible. No Inter fallback is needed. | nextjs.org/docs/app/api-reference/components/font |
 | Icons | `lucide-react`, current release | |
 | Forms | React Hook Form 7.92.0, Zod 4.6.7, `@hookform/resolvers` 7.0.6 (already pinned) | |
 | Sonner | Latest release, pinned by the developer | |
-| Browsers | Evergreen browsers from mid-2024 onward. The tightest constraint is CSS `light-dark()` (Baseline 2024). | developer.mozilla.org, `light-dark()` |
+| Browsers | Evergreen browsers from mid-2024 onward. The tightest constraint is CSS `light-dark()` (Baseline 2024). **`browserslist` rule:** `package.json` sets the minimums `chrome >= 123`, `edge >= 123`, `firefox >= 120`, `safari >= 17.5`. They must stay at or above the `light-dark()` baseline. Raising them is fine; lowering them breaks the native `light-dark()` output, because lightningcss then rewrites it into a polyfill resolved at `:root`, which breaks the `data-theme` panels on `/design` (and any future per-subtree theming). | developer.mozilla.org, `light-dark()` |
 
 ### 0.3 Where UI code lives
 
@@ -124,6 +124,7 @@ Naming follows shadcn: a base token is a surface and `-foreground` is the text/i
 | `--card-foreground` | `#0a0a0a` | `#fafafa` | | Text on card |
 | `--popover` | `#ffffff` | `#171717` | | Toast, drawer, future menus |
 | `--popover-foreground` | `#0a0a0a` | `#fafafa` | | |
+| `--canvas` | `#f5f5f5` | `#0a0a0a` | 0.97 / 0.145 | Page background behind a card (the auth page). Declared as `light-dark(#f5f5f5, #0a0a0a)` |
 | `--muted` | `#f5f5f5` | `#262626` | 0.97 / 0.269 | Quiet surfaces, skeleton, disabled/read-only fill |
 | `--muted-foreground` | `#636363` | `#a1a1a1` | 0.50 / 0.708 | Secondary text, hints, placeholders |
 | `--accent` | `#f5f5f5` | `#262626` | | Neutral hover surface (ghost button, nav hover). **Not the brand color.** |
@@ -131,6 +132,8 @@ Naming follows shadcn: a base token is a surface and `-foreground` is the text/i
 | `--border` | `#e5e5e5` | `#2e2e2e` | 0.922 / 0.30 | Decorative dividers and card borders only |
 | `--input` | `#8c8c8c` | `#696969` | 0.64 / 0.52 | Border of form controls (must reach 3:1; see below) |
 | `--overlay` | `rgb(10 10 10 / 0.5)` | `rgb(0 0 0 / 0.7)` | | Scrim behind the mobile drawer |
+
+`--canvas` exists because `--muted` cannot be a page background: in dark it is lighter (`#262626`) than `--card` (`#171717`), so a card on it would look sunken. **Elevation rule:** in dark the card is lighter than the canvas (`#171717` on `#0a0a0a`); in light the card is white on `#f5f5f5` and is separated by its `border-border` and `shadow-xs`. Use `bg-canvas` only for a full-page background behind a Card; never for a component surface.
 
 `--muted-foreground` is deliberately darker than shadcn's default (0.556) because the default falls to 4.34:1 on `--muted`, below AA. `--input` is deliberately darker than `--border` because WCAG 1.4.11 requires the boundary that identifies a form control to reach 3:1. `--border` stays light because it is decorative and never the only cue for a control.
 
@@ -192,6 +195,7 @@ Ratios are WCAG relative-luminance contrast on the final hex values. **They were
 | Pair (foreground on background) | Needs | Light | Dark |
 |---------------------------------|-------|-------|------|
 | `foreground` on `background` | 4.5 | 19.8 | 18.9 |
+| `foreground` on `canvas` | 4.5 | 18.2 | 18.9 |
 | `card-foreground` on `card` | 4.5 | 19.8 | 17.2 |
 | `muted-foreground` on `background` | 4.5 | 6.0 | 7.6 |
 | `muted-foreground` on `card` | 4.5 | 6.0 | 6.9 |
@@ -229,7 +233,7 @@ Disabled controls are exempt from contrast by WCAG, but they are never the only 
 
 ### 2.3 Typography
 
-- **One font:** Geist (variable, weights 400 to 600 used), loaded once with `next/font/google` in the root layout, exposed as `--font-sans`, mapped to Tailwind `font-sans`. Fallback stack ends in `system-ui, sans-serif` (handled by `next/font`).
+- **One font:** Geist (variable, weights 400 to 600 used), imported from the `geist` package (`geist/font/sans`, `next/font/local` over a bundled variable woff2) once in the root layout, exposed as `--font-geist-sans` and mapped to `--font-sans` and Tailwind `font-sans`. It is not loaded with `next/font/google` because that needs a network fetch at build time; the package is pinned in the lockfile. Fallback stack ends in `system-ui, sans-serif` (handled by `next/font`).
 - **Code:** no second font download; `font-mono` uses the system stack `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`.
 - **Scale** (the Tailwind v4 defaults, kept as the product scale):
 
@@ -318,7 +322,7 @@ Mobile-first. Tailwind v4 default breakpoints, unchanged:
 | Name | Min width | What changes |
 |------|-----------|--------------|
 | base | 0 | Single column, 44px controls, drawer navigation, 16px page padding |
-| `sm` | 640px | Two-column name fields, card styling on auth |
+| `sm` | 640px | Two-column name fields |
 | `md` | 768px | **Sidebar becomes permanent**, hamburger hidden, controls 40px, input text 14px, page padding 24 |
 | `lg` | 1024px | Page padding 32 |
 | `xl` | 1280px | Reference desktop width for tests |
@@ -333,7 +337,7 @@ Containers:
 | Auth card | `max-w-md` (448px), centered |
 | App content area | fluid up to `max-w-7xl` (1280px), left aligned next to the sidebar |
 | Form page body (future CRUD) | `max-w-2xl` (672px) |
-| Sidebar | `--sidebar-width: 16rem` (256px); mobile drawer 18rem, never wider than 85% of the viewport |
+| Sidebar | `--sidebar-width: 16rem` (256px); mobile drawer `w-72` (18rem), never wider than 5/6 of the viewport (`max-w-5/6`, about 83%) |
 
 Page templates in epic 001: auth layout (5.1), app shell (5.2), home page (5.3).
 
@@ -410,7 +414,7 @@ There is no `secondary` variant: `outline` covers it.
 | Disabled | `disabled`, `opacity-50`, `cursor-not-allowed` |
 | Loading | See below |
 
-**Loading.** The button gets `aria-disabled="true"` (not the `disabled` attribute, so focus is not lost), ignores clicks and Enter (prevents double submit), shows a Spinner (decorative) before the label, and the label changes to the progressive form ("Creating account..."). Width does not jump (the spinner replaces the leading icon or is added; min-width is held). The surrounding form sets `aria-busy="true"`.
+**Loading.** The button gets `aria-disabled="true"` (not the `disabled` attribute, so focus is not lost), ignores clicks and Enter (prevents double submit), shows a Spinner (decorative) before the label, and the label changes to the progressive form ("Creating account…", with the ellipsis character). **Width:** `min-width` is not held (that would need an arbitrary value), so the width of a content-sized button may change when the spinner is added and the label changes. Form submit buttons use `w-full`, where it does not matter; if a content-sized loading button appears in a later epic, add a width token then. The surrounding form sets `aria-busy="true"`.
 
 **Keyboard.** Enter and Space activate. Navigation uses a link element styled as a button (`asChild` with the Next.js link); actions use a real `button`. `type="submit"` only on the form's submit button; every other button is `type="button"`.
 
@@ -436,6 +440,7 @@ There is no `secondary` variant: `outline` covers it.
 | Disabled | `disabled`, `opacity-50`, `bg-muted`, `cursor-not-allowed` |
 | Read-only | `bg-muted`, normal opacity, focusable |
 | Invalid (`aria-invalid="true"`) | `border-destructive`; the message and icon in FormField carry the meaning, not the color |
+| Focused and invalid | The destructive border is kept (the field stays visibly invalid) and the 2px `--ring` outline is shown, so focus is still visible |
 | Loading | n/a (the form shows loading on the button) |
 
 **Attributes (per field type, set by the caller; documented so the developer need no guesswork)**
@@ -516,7 +521,7 @@ The error container `<id>-error` is always in the DOM and carries `aria-live="po
 
 **Purpose.** Password entry with show/hide. Used on login and sign-up (twice).
 
-**Anatomy.** An Input (4.2) with a trailing icon button inside the right edge. The button is a ghost icon button that fills the control height minus the border (so 44px square on touch, 40px from `md`), `Eye` when hidden and `EyeOff` when shown. The input has right padding equal to the button width so text never runs under it.
+**Anatomy.** An Input (4.2) with a trailing icon button inside the right edge. The button is a ghost icon button positioned at the top right that fills the full control height and therefore sits over the input's 1px border (44px square below `md`, 40px square from `md`; it has the same radius as the input, so only its hover surface overlaps the border), `Eye` when hidden and `EyeOff` when shown. The input has right padding equal to the button width so text never runs under it.
 
 **Behavior**
 
@@ -581,7 +586,7 @@ Padding `p-4`, gap 12, `rounded-lg`, 1px border.
 
 **Spinner.** The `LoaderCircle` icon with a rotation animation, sizes 16 (default inside buttons), 20, 24. Color `currentColor`. Inside a button it is `aria-hidden` (the label change communicates the state). Standalone (page or section loading) it has `role="status"` and an accessible name "Loading". Under reduced motion it is static (2.6).
 
-**Skeleton.** A `bg-muted` block with `rounded-md` and a soft pulse; the shape mimics the content it replaces. Use a skeleton, not a spinner, when the layout of what is loading is known (a page header and a card, later table rows). The container of a loading region has `aria-busy="true"` and one visually hidden "Loading..." text; the skeleton blocks are `aria-hidden`. Skeletons never flash for fast loads: show only if loading exceeds about 300ms (the developer may use Suspense timing; no extra code in 001).
+**Skeleton.** A `bg-muted` block with `rounded-md` and a soft pulse; the shape mimics the content it replaces. Use a skeleton, not a spinner, when the layout of what is loading is known (a page header and a card, later table rows). The region wrapper (`PageSkeleton`, or any future loading region) owns `aria-busy="true"` and the single visually hidden "Loading…" text; the skeleton blocks are `aria-hidden`. A bare Skeleton must never be used outside such a region. Skeletons never flash for fast loads: show only if loading exceeds about 300ms (the developer may use Suspense timing; no extra code in 001).
 
 **States.** Pulsing (normal), static (reduced motion). Tokens: `muted`, `foreground`, radius, motion.
 
@@ -646,6 +651,7 @@ Not a separate shadcn component, but a shared style so inline links look the sam
                             +--------------------------------------------------+
 ```
 
+- **Background:** the page uses `bg-canvas` (not `bg-muted`) behind the card, so the card is lighter than the page in dark and separated by its border and `shadow-xs` in light (elevation rule in 2.2). The card is shown on the canvas at every width, including 375px.
 - A full-height column (`min-h-dvh`), content centered horizontally; on desktop also near the vertical center (slightly above center, `py-12`), on mobile top aligned with `py-8` so the keyboard does not hide the form.
 - Wordmark above the card, centered, links to `/`. The card is `max-w-md`, full width on mobile with `px-4` outside it.
 - The card title is the page `h1`; a short description is optional. Below the form, one alternative-action line ("Already have an account? Log in") in `text-sm text-muted-foreground` with a Link.
@@ -685,10 +691,11 @@ Mobile < 768px                       Drawer open
 
 | Part | Spec |
 |------|------|
+| Wordmark in the sidebar | Plain text in 001, not a link (there is no product page to link to yet). Epic 002 links it to the dashboard (the auth layout wordmark links to `/`). |
 | Sidebar | Built on shadcn `Sidebar` with `collapsible="offcanvas"`. Permanent at `md` and up; below `md` it renders as a drawer (shadcn uses a Sheet) opened by the hamburger. Background `sidebar`, right border `sidebar-border`. Header: Wordmark. Content: nav groups (group label `text-xs font-medium text-muted-foreground`, items below). Width 16rem. No desktop collapse control and no Ctrl/Cmd+B shortcut in 001 (a hidden, unexplained state); a future epic can add them. |
 | Nav item | Icon (20) + label (`text-sm font-medium`), height 44px on touch and 40px from `md`, `rounded-md`, `px-3`. Hover `sidebar-accent`. **Active item**: `aria-current="page"`, `sidebar-accent` surface, `font-semibold`, and a 2px `--primary` indicator on the left edge (not color alone: weight and surface also change). Focus-visible: shared ring. One item in 001: "Dashboard" (`LayoutDashboard`). |
 | Top bar | `h-14`, sticky (`--z-sticky`), `bg-background`, bottom border. Left: hamburger (`md:hidden`, icon button, `aria-label="Open navigation"`) then the **company name placeholder** (text, `font-medium`, truncates with ellipsis on overflow, `min-w-0`). Right: **user menu slot** (a named slot that epic 002 fills). In 001 the slot is empty; on `/design` it shows a stand-in outline button. |
-| Page header | Title (`h1`, page-title role), optional description (`text-sm text-muted-foreground`), actions slot on the right (wraps below the title on mobile, full-width primary on mobile). Bottom spacing 24. |
+| Page header | Title (`h1`, page-title role), optional description (`text-sm text-muted-foreground`), actions slot on the right. **The mobile breakpoint is `md`, not `sm`:** below `md` the actions wrap below the title and each action (direct child) is full width (`*:w-full`); from `md` the row layout applies and each action is auto width (`md:*:w-auto`). The component enforces this, so callers do not add `w-full`. With several actions, each is full width and they stack one per row below `md`. Bottom spacing 24. |
 | Content area | `main` landmark, `max-w-7xl`, page padding per 2.4. |
 | Skip link | First focusable element in the shell: "Skip to main content", visible on focus, jumps to `main`. |
 
@@ -696,7 +703,7 @@ Mobile < 768px                       Drawer open
 
 **Keyboard.** Skip link, then sidebar items in order, then top bar controls, then content (DOM order = visual order). Hamburger opens the drawer; inside it Tab cycles; Escape closes and returns focus. The sticky top bar must never cover the focused element: the page sets `scroll-padding-top` of at least the top bar height plus 16px (WCAG 2.4.11 Focus Not Obscured).
 
-**ARIA.** `<nav aria-label="Main">` for the sidebar; the top bar is a `<header>`; the drawer has a dialog role and a label ("Navigation") provided by the Sheet; `aria-current="page"` on the current item.
+**ARIA.** `<nav aria-label="Main">` for the sidebar; the top bar is a `<header>`; the drawer has a dialog role and a label ("Navigation") provided by the Sheet (title "Navigation", close label "Close navigation", open label "Open navigation": final copy); `aria-current="page"` on the current item.
 
 **Company name and user menu.** The company name is plain text in 001 (the switcher is out of scope for epic 002). The user menu slot is a slot, not a component: **epic 002's sign-out is a plain ghost Button labeled "Log out" placed in the slot**, because Dropdown menu and Avatar are not in the 001 component list. When a profile menu with several items is needed, the epic that needs it adds Dropdown menu and Avatar here first.
 
@@ -778,7 +785,7 @@ Friendly, clear, concise, human, no jargon. Talk to the person ("you", "your com
 | Topic | Rule |
 |-------|------|
 | Capitalization | Sentence case everywhere (titles, buttons, labels, nav). Product name and proper nouns excepted. |
-| Buttons and links | Start with a verb: "Create account", "Log in", "Log out", "Save changes". Never "Submit", "OK", "Click here". Loading form: verb in progressive tense plus an ellipsis character: "Creating account…". |
+| Buttons and links | Start with a verb: "Create account", "Log in", "Log out", "Save changes". Never "Submit", "OK", "Click here". Loading form: verb in progressive tense plus the single ellipsis character "…" (never three dots "..."), in loading labels and the hidden "Loading…" text alike: "Creating account…". |
 | Terminology | **"company"** is the UI term for a tenant. Never "tenant", "workspace" or "organization" in UI copy. Use "account" for the person's login ("Create your account"), "email" (not "e-mail"), "Log in" and "Log out" (verbs) and "login" only as a noun if ever needed. |
 | Errors | Formula: **what happened plus how to fix it**; never blame ("You entered..." becomes "Enter..."). Specific to the field. No codes or technical terms. |
 | Hints | Only where they prevent an error (password length). Short, a fragment with a full stop. |
@@ -1001,6 +1008,28 @@ A single scrolling page with an in-page section list at the top (anchors) and th
 
 Every component added later is added to section 7 as part of its Definition of Done (1.2).
 
+### 12.4 Known limits and accepted deviations (design review FND-T-34)
+
+**M4 note.** The Layouts section stacks the light and dark panels in one column, but the page container is `max-w-7xl` (usable panel width about 1160px), so the 1280px frames still scroll horizontally about 120px inside their panel. Showing them fully would need a wider `/design` container or frame scaling (which needs an inline style or arbitrary value that rule 1.1 forbids). Accepted; the page says that a frame wider than the page scrolls, and the layouts are also covered by E2E tests.
+
+**Accepted deviations (decisions of the review):**
+
+| Deviation | Decision |
+|-----------|----------|
+| Password toggle covers the 1px input border (4.5) | Accept with note. An exact fit needs a `calc()` or a new utility for little gain. |
+| Focused and invalid input keeps the destructive border plus the ring outline (4.2) | Accept with note. |
+| Button loading does not hold `min-width` (4.1) | Accept with note: use `w-full` on submit buttons. |
+| Skeleton is not a region component (4.8) | Accept with note: the region wrapper owns `aria-busy`. |
+| Drawer `w-72 max-w-5/6` (83%) instead of 85% (2.7) | Accept. |
+| No desktop sidebar collapse and no Ctrl/Cmd+B (5.2) | Accept. |
+| Drawer copy "Navigation" and "Close navigation" (5.2) | Accept, final. |
+| Sign-out as a plain ghost "Log out" button (5.2) | Accept with note: epic 002's design phase may choose ghost or outline once it sees it in place. |
+| Empty state as a pattern, not a component (7.3) | Accept until a second screen needs it. |
+| Geist from the `geist` package (0.2, 2.3) | Accept. |
+| Colors as hex (2.2) | Accept. |
+| Hover, active and focus-visible are live, not static, on `/design` | Accept; stated on the page and tested with real interaction. |
+| Shell wordmark is not a link (5.2) | Deferred to epic 002. |
+
 ### 12.3 Checks the page must support
 
 Zero axe violations in light and dark; no horizontal page scroll at 375px and 1280px; the 404 gate; exactly one toast provider; FormField's error exposes `aria-invalid` and `aria-describedby`; the keyboard path to the mobile drawer (FND-FR-15 to FND-FR-17, FND-NFR-03, FND-NFR-04; tests in FND-T-33).
@@ -1017,3 +1046,4 @@ Zero axe violations in light and dark; no horizontal page scroll at 375px and 12
 | Date | Change |
 |------|--------|
 | 2026-11-12 | First version (FND-T-28). |
+| 2026-11-13 | Aligned with the implementation after the design review (FND-T-59): Geist via the `geist` package (0.2, 2.3); `browserslist` note (0.2); `--canvas` token, elevation rule and contrast pair (2.2, 5.1); drawer `w-72 max-w-5/6` (2.7); Button loading width rule (4.1); focused-and-invalid Input (4.2); password toggle anatomy (4.5); skeleton region rule and ellipsis character (4.8, 8.2); PageHeader action rule at `md`, final drawer copy and shell wordmark note (5.2); known limits and accepted deviations (12.4). |
