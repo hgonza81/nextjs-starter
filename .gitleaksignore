@@ -1,0 +1,6 @@
+# False positive: the generic-api-key rule matched the words "foreign-key
+# violation" in a sentence of flows.md (epic 002). It is plain text, not a
+# secret. History is already pushed and is not rewritten, so this exact
+# fingerprint (commit:file:rule:line) is ignored. Any other finding is still
+# reported.
+941dc8326c82b7da6ac695a2445578de836c0946:specs/002-platform-hardening/flows.md:generic-api-key:136
