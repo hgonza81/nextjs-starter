@@ -301,7 +301,7 @@ jobs:
             if pnpm --reporter=silent dlx "vercel@${VERCEL_CLI_VERSION}" curl \
               "${DEPLOYMENT_URL}/api/health" --yes \
               -- --fail --silent --show-error --output "${body_file}" \
-              && [ "$(cat "${body_file}")" = '{"status":"ok"}' ]; then
+              && [ "$(cat "${body_file}")" = '{"status":"ok","proof":true}' ]; then
               echo "Health check passed on attempt ${attempt}." >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
