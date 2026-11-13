@@ -81,7 +81,7 @@
 | PH-T-61 | Final tester read | tester | 6 | T-59 (Independent of T-60) | todo |
 | PH-T-62 | Final acceptance | product-manager | 6 | T-60, T-61 | todo |
 | PH-T-63 | Fix: `request_id` missing on route-handler failures logged by the hook | developer | 1 | T-20 | done |
-| PH-T-64 | Adjust the bad-variable startup test to the relaxed PH-AC-23 | tester | 2 | T-28 | todo |
+| PH-T-64 | Adjust the bad-variable startup test to the relaxed PH-AC-23 | tester | 2 | T-28 | done |
 
 Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-ux-designer 1. Total 62.
 
