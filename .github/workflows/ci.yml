@@ -195,8 +195,11 @@ jobs:
       # devDependency would add ~235 packages to every install and audit, and
       # the project's minimum release age policy would need 17 exclusions for
       # a brand-new release. Trade-off: the CLI's own transitive dependencies
-      # are not lockfile-pinned. Bump the version deliberately.
-      VERCEL_CLI_VERSION: 65.15.0
+      # are not lockfile-pinned. Bump the version manually (Dependabot does
+      # not see it), and only to a release (and dependencies) published more
+      # than 24 h ago: `minimumReleaseAge: 1440` (ADR 0010) makes `pnpm dlx`
+      # fail with ERR_PNPM_NO_MATURE_MATCHING_VERSION otherwise (FND-T-64).
+      VERCEL_CLI_VERSION: 65.14.0
     steps:
       # `secrets` cannot be used in `if:`, so the values are mapped to env and
       # tested here. Until the Product Owner creates all three secrets, the
@@ -259,7 +262,7 @@ jobs:
       #
       # VERCEL_ORG_ID and VERCEL_PROJECT_ID are deliberately NOT set here
       # (FND-T-57). `vercel pull` already wrote them, plus the project name,
-      # to .vercel/project.json. With that file the CLI 65.15.0 deploy skips
+      # to .vercel/project.json. With that file the CLI deploy skips
       # its remote owner lookup. With the two env vars it does the lookup
       # (the org id must match the token's user or a team it can read, which
       # `pull` never checks) and fails with "Project not found" when it does

@@ -73,6 +73,7 @@
 | FND-T-41 | Project README | developer | 9 | T-39 | done (Independent of T-40) |
 | FND-T-42 | Onboarding dry run | tester | 9 | T-40, T-41 | done |
 | FND-T-63 | README clarity fixes from the onboarding dry run (T-42) | developer | 9 | T-42 | done |
+| FND-T-64 | Pin a Vercel CLI older than the 24h release-age gate in the deploy job (T-45 finding) | developer | 9 | T-45 | done |
 | FND-T-43 | Final architect check: ADRs, architecture, conventions | architect | 9 | T-42 | done |
 | FND-T-44 | Final acceptance, local part (DoD 1-8, 10) | product-manager | 9 | T-43 | done (see acceptance/final-local.md) |
 | FND-T-56 | Vercel framework preset in `vercel.json` and ci.yml leftovers (first real deploy failed at Build) | developer | 6 | T-27 | done |
@@ -592,6 +593,13 @@ Count by assignee: developer 17, tester 17, product-manager 8, architect 4, ui-u
 - **Output:** `README.md`. Commit scope `docs`, body `Task: FND-T-63`.
 - **Dependencies:** FND-T-42.
 
+### FND-T-64 Pin a Vercel CLI older than the release-age gate in the deploy job (T-45 finding)
+- **Assignee:** developer
+- **Goal:** CI run 43361230419 failed in the Deploy job: `pnpm dlx vercel@65.15.0 pull` hit `ERR_PNPM_NO_MATURE_MATCHING_VERSION` because `minimumReleaseAge: 1440` (ADR 0010) rejects a CLI published about 12 h earlier. The Product Owner chose to keep the policy and pin an older CLI.
+- **Do:** set `VERCEL_CLI_VERSION` to the newest release more than 24 h old (65.14.0, published 2026-11-09), update every reference (ci.yml, ADR 0004/0009, architecture.md) and document that the pin is bumped manually and only to a release at least 24 h old. Do not lower `minimumReleaseAge`, do not pass `--config.minimumReleaseAge`, do not use `npx`.
+- **Output:** `.github/workflows/ci.yml`, docs. Commit scope `fix(ci)`, body `Task: FND-T-64`.
+- **Dependencies:** FND-T-45.
+
 ### FND-T-43 Final architect check: ADRs, architecture, conventions
 - **Assignee:** architect
 - **Goal:** confirm ADRs 0001-0005 and docs match the built result.
@@ -911,3 +919,4 @@ Facts discovered while executing tasks that later tasks must know. Read the ones
 - **T-39 (step 8 accepted with notes, no rejected items):** see `acceptance/step-8.md` (written without a shell; the orchestrator confirmed lint, typecheck and 242/242 tests on HEAD). Every rule (a) to (f) has a convention (C1 to C11), an ESLint rule and a test in `tests/lint/boundaries.test.ts`; the T-61 relative `../db/client` and `../db/rls` cases from `src/lib` are tested; the `sql.raw` and `process.env` extras (ADR 0003, 0004) and the `tests/**` exemptions are documented and tested; the boundary rules do not touch design files. **Open points:** architect (T-43): refresh the stale "Known gaps" item 1 in `docs/architecture.md` (only `../db` and `../db/index` from `src/lib` remain unreported); tester (optional): tidy the contrived `.replace` case in the (b) test; PO: whether to schedule the resolver-based hardening (default: at the start of epic 002); T-48: DoD item 7 sign-off.
 - **T-40 (done), facts for T-41, T-47:** `tests/README.md` reorganized (Commands, Layout, Prerequisites, Resetting state, harness, "Schema guard allowlist", "Lint boundary tests", empty "Gate failure proofs" for T-47, Debugging; the per-task mutation records were kept). Run once on the real stack: `pnpm test` 242/242, `pnpm test:coverage` (81% lines, report only), `pnpm db:start`, `pnpm db:reset`, `pnpm test:db` twice 212/212, `pnpm test:e2e` 110/110, plus single-file forms (`pnpm test tests/lint`, `pnpm test:db tests/db/harness.test.ts`, `-t`, `pnpm test:e2e tests/e2e/health.spec.ts`). Not run: `playwright --ui` and `--headed` (need a display; documented from Playwright's flags). Corrections to the task text: E2E needs no Docker, and the three `NEXT_PUBLIC_*` variables need no export because `playwright.config.ts` sets them (E2E passed with none exported); the README says to export them only for a hand-started app.
 - **T-43 (architect):** ADRs 0001 to 0011 checked against the code and config (Data API off, `postgres` driver with `prepare: false, max: 1`, no `gen types`, SQL-first plus drift check, `app_backend` and its timeouts, env split, `vercel.json` auto-deploy off, boundary rules, design-system, CI and pinning). No real divergence found. Docs fixed: ADR 0007 no longer shown as Proposed in `architecture.md`, Known gaps item 1 refreshed for T-61, `minimumReleaseAgeExclude` housekeeping rule with publish dates. `cn` provenance confirmed on the registry. The three exclude entries can be removed after 2026-11-13 07:06 UTC.
+- **T-64 (done):** `VERCEL_CLI_VERSION` is now 65.14.0 (npm publish time 2026-11-09T18:03:45Z; 65.15.0 was published 2026-11-12T16:17Z). Verified from a scratch directory outside the repo with `pnpm --config.minimumReleaseAge=1440 dlx`: `vercel@65.14.0 --version` succeeds, `vercel@65.15.0` fails with the release-age error; `pull --yes --environment`, `build --prod`, `deploy --prebuilt --prod --env` and `curl --yes` flags exist in 65.14.0 `--help`. No Vercel API call, no token. The T-57 root-cause analysis was read from 65.15.0 code and was not re-checked on 65.14.0. When bumping the pin, pick a version (and check its dependencies) published more than 24 h ago; Dependabot does not bump it.
