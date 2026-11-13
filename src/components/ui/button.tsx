@@ -1,3 +1,5 @@
+"use client";
+
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import type { ComponentProps, MouseEvent } from "react";
@@ -5,6 +7,10 @@ import type { ComponentProps, MouseEvent } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
+// Client component: the loading guard installs an onClick handler, which a
+// Server Component cannot render onto a host element (found in FND-T-31 when
+// a server page used a Button).
+//
 // Hover and active are skipped while the button is disabled or loading
 // (`aria-disabled`), so a busy button does not look clickable.
 const buttonVariants = cva(

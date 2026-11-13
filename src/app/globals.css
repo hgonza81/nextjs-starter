@@ -235,15 +235,22 @@
   z-index: var(--z-toast);
 }
 
+/*
+ * --tw-duration also feeds tw-animate-css, whose enter/exit animations (the
+ * drawer, the scrim) read it for their length.
+ */
 @utility duration-fast {
+  --tw-duration: var(--duration-fast);
   transition-duration: var(--duration-fast);
 }
 
 @utility duration-base {
+  --tw-duration: var(--duration-base);
   transition-duration: var(--duration-base);
 }
 
 @utility duration-slow {
+  --tw-duration: var(--duration-slow);
   transition-duration: var(--duration-slow);
 }
 
@@ -262,6 +269,12 @@
 @layer base {
   * {
     border-color: var(--border);
+  }
+
+  /* The sticky app-shell top bar (h-14 = 3.5rem) must never cover a focused
+     element (WCAG 2.4.11): 3.5rem bar + 1rem. */
+  html {
+    scroll-padding-top: calc(var(--spacing) * 18);
   }
 
   body {
