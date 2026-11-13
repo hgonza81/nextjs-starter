@@ -112,6 +112,7 @@ describe("server env (src/lib/env.server.ts)", () => {
       NODE_ENV: "test",
       ...validServer,
       DESIGN_PAGE_ENABLED: false,
+      OTEL_SERVICE_NAME: "nextjs-starter",
     });
   });
 
@@ -184,6 +185,40 @@ describe("server env (src/lib/env.server.ts)", () => {
     stubAll({ DESIGN_PAGE_ENABLED: "yes" }, "production");
 
     await expect(loadServer()).rejects.toThrow(/DESIGN_PAGE_ENABLED/);
+  });
+
+  it("PH-AC-23: with no OTEL_* variable set, telemetry config is empty and the service name defaults", async () => {
+    stubAll();
+
+    const { serverEnv } = await loadServer();
+
+    expect(serverEnv.OTEL_EXPORTER_OTLP_ENDPOINT).toBeUndefined();
+    expect(serverEnv.OTEL_EXPORTER_OTLP_PROTOCOL).toBeUndefined();
+    expect(serverEnv.OTEL_SERVICE_NAME).toBe("nextjs-starter");
+  });
+
+  it("PH-AC-23: accepts valid OTEL_* values", async () => {
+    stubAll({
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/json",
+      OTEL_SERVICE_NAME: "my-app",
+    });
+
+    const { serverEnv } = await loadServer();
+
+    expect(serverEnv.OTEL_EXPORTER_OTLP_ENDPOINT).toBe("http://localhost:4318");
+    expect(serverEnv.OTEL_EXPORTER_OTLP_PROTOCOL).toBe("http/json");
+    expect(serverEnv.OTEL_SERVICE_NAME).toBe("my-app");
+  });
+
+  it.each([
+    ["OTEL_EXPORTER_OTLP_ENDPOINT", "not a url"],
+    ["OTEL_EXPORTER_OTLP_PROTOCOL", "grpc"],
+    ["OTEL_SERVICE_NAME", ""],
+  ])("PH-AC-23: rejects an invalid %s naming it", async (name, value) => {
+    stubAll({ [name]: value });
+
+    await expect(loadServer()).rejects.toThrow(new RegExp(name));
   });
 
   it("FND-FR-03: requireDatabaseUrl returns the configured URL", async () => {

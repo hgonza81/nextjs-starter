@@ -17,6 +17,12 @@ const optionalSwitch = z.preprocess(
   z.enum(["true", "false", "1", "0"]).optional(),
 );
 
+// OTLP transport format (PH-FR-13). Blank counts as "not set".
+const optionalOtlpProtocol = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.enum(["http/protobuf", "http/json"]).optional(),
+);
+
 /**
  * Server-only environment, ADR 0004. `server-only` makes any client import a
  * build error, so these values cannot reach the browser bundle.
@@ -34,6 +40,12 @@ const optionalSwitch = z.preprocess(
  * 404 without any configuration. It is deliberately not `NEXT_PUBLIC_`: that
  * would inline the value into the bundle at build time.
  *
+ * OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_PROTOCOL and
+ * OTEL_SERVICE_NAME (PH-FR-13, ADR 0013) configure telemetry; this module only
+ * validates them. OTEL_SERVICE_NAME must not be empty (it defaults when unset).
+ * OTEL_EXPORTER_OTLP_HEADERS may carry credentials: it is deliberately not
+ * declared, so app code never reads or logs it (only the SDK does, C11).
+ *
  * SUPABASE_SERVICE_ROLE_KEY is deliberately not defined: nothing consumes it.
  */
 const serverEnvSchema = z
@@ -42,6 +54,9 @@ const serverEnvSchema = z
     DATABASE_URL: optionalUrl,
     DATABASE_MIGRATION_URL: optionalUrl,
     DESIGN_PAGE_ENABLED: optionalSwitch,
+    OTEL_EXPORTER_OTLP_ENDPOINT: optionalUrl,
+    OTEL_EXPORTER_OTLP_PROTOCOL: optionalOtlpProtocol,
+    OTEL_SERVICE_NAME: z.string().min(1).default("nextjs-starter"),
   })
   .superRefine((env, context) => {
     if (env.NODE_ENV === "production") return;
@@ -71,6 +86,9 @@ function parseServerEnv(): ServerEnv {
     DATABASE_URL: process.env.DATABASE_URL,
     DATABASE_MIGRATION_URL: process.env.DATABASE_MIGRATION_URL,
     DESIGN_PAGE_ENABLED: process.env.DESIGN_PAGE_ENABLED,
+    OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+    OTEL_EXPORTER_OTLP_PROTOCOL: process.env.OTEL_EXPORTER_OTLP_PROTOCOL,
+    OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
   });
   if (!result.success) {
     throw new Error(formatEnvError(result.error));
