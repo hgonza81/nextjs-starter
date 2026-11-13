@@ -221,6 +221,37 @@ describe("server env (src/lib/env.server.ts)", () => {
     await expect(loadServer()).rejects.toThrow(new RegExp(name));
   });
 
+  it.each(["http/protobuf", "http/json"])(
+    "PH-AC-23: accepts the OTLP protocol %s",
+    async (protocol) => {
+      stubAll({ OTEL_EXPORTER_OTLP_PROTOCOL: protocol });
+
+      const { serverEnv } = await loadServer();
+
+      expect(serverEnv.OTEL_EXPORTER_OTLP_PROTOCOL).toBe(protocol);
+    },
+  );
+
+  it.each(["OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_EXPORTER_OTLP_PROTOCOL"])(
+    "PH-AC-23: a blank %s counts as not set",
+    async (name) => {
+      stubAll({ [name]: "" });
+
+      const { serverEnv } = await loadServer();
+
+      expect(serverEnv[name as keyof typeof serverEnv]).toBeUndefined();
+    },
+  );
+
+  it("PH-AC-23: an invalid endpoint is reported without printing its value", async () => {
+    stubAll({ OTEL_EXPORTER_OTLP_ENDPOINT: "secret-token-value" });
+
+    const error = await loadServer().catch((e: unknown) => e);
+
+    expect(String(error)).toMatch(/OTEL_EXPORTER_OTLP_ENDPOINT/);
+    expect(String(error)).not.toContain("secret-token-value");
+  });
+
   it("FND-FR-03: requireDatabaseUrl returns the configured URL", async () => {
     stubAll();
 
