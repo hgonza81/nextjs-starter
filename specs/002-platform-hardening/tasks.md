@@ -33,7 +33,7 @@
 | PH-T-13 | E2E harness: server wrapper with log tee, ports, config | tester | 1 | T-07, T-10 | done |
 | PH-T-14 | Tests: logger (incl. trace id) and no-console | tester | 1 | T-03 | done |
 | PH-T-15 | Tests: errors and database mapping | tester | 1 | T-05 | done |
-| PH-T-16 | Tests: `defineAction` | tester | 1 | T-12 | todo |
+| PH-T-16 | Tests: `defineAction` | tester | 1 | T-12 | done |
 | PH-T-17 | Tests: hook (unit) | tester | 1 | T-11 | todo |
 | PH-T-18 | E2E: error pages and 404; unit: fault gate | tester | 1 | T-10, T-13 | todo |
 | PH-T-19 | E2E: server-side capture (codes, hook, action, route handler) | tester | 1 | T-11, T-12, T-13 | todo |
