@@ -9,6 +9,12 @@ Short overview; decisions and reasons are in the ADRs ([index](adr/README.md)). 
 | [0003](adr/0003-drizzle-rls-data-access.md) | Drizzle, `withRls`, `app_backend` role, Data API off |
 | [0004](adr/0004-env-and-secrets.md) | Environment variables, secrets, deployment |
 | [0005](adr/0005-tenant-isolation-direction.md) | Tenant isolation direction for epic 002 |
+| [0006](adr/0006-ui-stack-and-design-system-boundary.md) | UI stack (Tailwind v4, shadcn on Radix, Lucide, Geist) and the bounded design system |
+| [0007](adr/0007-theming-mechanism-and-browser-floor.md) | `light-dark()` theming and the `browserslist` floor (Proposed) |
+| [0008](adr/0008-test-strategy-and-tooling.md) | Vitest unit/db projects, Playwright, axe, real-DB harness |
+| [0009](adr/0009-ci-cd-pipeline.md) | CI jobs, blocking vs informational, deploy from Actions only |
+| [0010](adr/0010-toolchain-pinning-and-supply-chain.md) | pnpm, Node pin, exact versions, release-age policy, manual dependency updates |
+| [0011](adr/0011-validation-and-forms.md) | Zod and React Hook Form |
 
 ## Stack
 Next.js (App Router, strict TypeScript), Supabase Auth, PostgreSQL with RLS, Drizzle ORM (`postgres` driver), Tailwind CSS v4 with shadcn (Radix) components, Supabase CLI + Docker for local development and CI, Vercel deployment from GitHub Actions.
@@ -111,7 +117,7 @@ These are convention (C4) violations as much as lint gaps, and none is reachable
 
 ## Design system
 Tokens, components and rules are in [design-system.md](design-system.md). Architecture-relevant points:
-- `src/app/globals.css` is the one token file. Theming uses CSS `light-dark()` with `color-scheme: light dark` instead of shadcn's `.dark` class; this is a two-way door (components consume semantic tokens only, so changing the mechanism edits that one file) and is explained in design-system section 2.1, not in an ADR.
+- `src/app/globals.css` is the one token file. Theming uses CSS `light-dark()` with `color-scheme: light dark` instead of shadcn's `.dark` class; changing the mechanism edits that one file because components consume semantic tokens only. It is explained in design-system section 2.1 and recorded in [ADR 0007](adr/0007-theming-mechanism-and-browser-floor.md); the UI stack is in [ADR 0006](adr/0006-ui-stack-and-design-system-boundary.md).
 - **`browserslist` rule.** `package.json` pins `chrome >= 123`, `edge >= 123`, `firefox >= 120`, `safari >= 17.5`. Do not lower it or replace it with Next's default list: lightningcss would then polyfill `light-dark()` into a rule resolved at `:root`, which breaks the `data-theme` panels on `/design` and any per-subtree theming. Raising it is fine.
 - `/design` is gated by `DESIGN_PAGE_ENABLED` (see "Environment") and is not linked from the app.
 
@@ -122,6 +128,8 @@ Tokens, components and rules are in [design-system.md](design-system.md). Archit
 - **Pinning policy.** Exact versions (`saveExact`), lockfile committed; no dependency is added without a requirement. Epic 001 adds none for the boundary lint.
 
 ## CI/CD
+Decision record: [ADR 0009](adr/0009-ci-cd-pipeline.md); toolchain and dependency policy: [ADR 0010](adr/0010-toolchain-pinning-and-supply-chain.md); tests: [ADR 0008](adr/0008-test-strategy-and-tooling.md); validation and forms: [ADR 0011](adr/0011-validation-and-forms.md).
+
 One workflow, `.github/workflows/ci.yml`, trigger `on: push` (no `pull_request`: fork PRs start nothing; Dependabot branches and tags run the checks but never deploy). Permissions are `contents: read`; actions are pinned by full commit SHA with the release in a comment (Dependabot bumps them). Runs use the same `pnpm` scripts as local development.
 
 | Job | Kind | What it does |

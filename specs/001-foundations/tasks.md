@@ -67,6 +67,7 @@
 | FND-T-37 | Boundary lint rules | developer | 8 | T-36, T-35 | done |
 | FND-T-38 | Boundary rule tests (fixtures) | tester | 8 | T-37 | done |
 | FND-T-61 | Close the src/lib relative-import gap in the boundary lint (T-38 finding) | developer | 8 | T-38 | done |
+| FND-T-62 | Write missing ADRs for decisions made in steps 1-8 | architect | 8 | T-61 | done |
 | FND-T-39 | Accept step 8 | product-manager | 8 | T-38, T-61 | todo |
 | FND-T-40 | Test README | tester | 9 | T-39 | todo |
 | FND-T-41 | Project README | developer | 9 | T-39 | todo (Independent of T-40) |
@@ -538,6 +539,15 @@ Count by assignee: developer 17, tester 17, product-manager 8, architect 4, ui-u
 - **Output:** lint config and test. Commit scope `chore(lint)`, body `Task: FND-T-61`.
 - **Dependencies:** FND-T-38.
 
+### FND-T-62 Write missing ADRs for decisions made in steps 1-8
+- **Assignee:** architect
+- **Goal:** every hard-to-reverse decision taken in steps 1 to 8 has an ADR (AGENTS.md); the PO asked to keep creating ADRs. Existing ADRs 0001 to 0005 are not renumbered.
+- **Requirements:** FND-FR-13, FND-FR-27 (documentation).
+- **Do:** read the spec decisions, questions, acceptance notes, execution notes, `eslint.config.mjs`, `ci.yml`, `vercel.json` and `package.json`; write ADRs 0006 to 0011 (UI stack, theming and browser floor, test strategy, CI/CD pipeline, toolchain and supply chain, validation and forms); update `docs/adr/README.md` and link them from `docs/architecture.md`. Status `Accepted` only where the PO decided it (cited); `Proposed` plus a question otherwise (0007). Boundary lint tooling is already in the ADR 0001 amendment; deployment secrets and the Vercel flow are in ADR 0004: not duplicated.
+- **Acceptance:** each new ADR follows the template, cites its source, lists rejected alternatives found in the docs; index and architecture links are updated.
+- **Output:** docs only. Commit scope `docs(adr)`, body `Task: FND-T-62`.
+- **Dependencies:** FND-T-61.
+
 ---
 
 ## 10. Step 9: documentation and final acceptance
@@ -692,6 +702,7 @@ Every FND-FR and FND-NFR appears at least once as a build task and at least once
 | Date | Change |
 |------|--------|
 | 2026-11-12 | First version of the task list (48 tasks). |
+| 2026-11-12 | Added FND-T-62 (architect): ADRs 0006 to 0011 for decisions made in steps 1 to 8 that had no ADR. |
 
 ### FND-T-49 Step 1 follow-ups from T-04
 

@@ -24,3 +24,9 @@ See [0000-template.md](0000-template.md).
 | [0003](0003-drizzle-rls-data-access.md) | Data access with Drizzle and RLS through `withRls` | Accepted |
 | [0004](0004-env-and-secrets.md) | Environment variables and secrets | Accepted |
 | [0005](0005-tenant-isolation-direction.md) | Tenant isolation direction | Accepted |
+| [0006](0006-ui-stack-and-design-system-boundary.md) | UI stack and design-system boundary | Accepted |
+| [0007](0007-theming-mechanism-and-browser-floor.md) | Theming mechanism and browser support floor | Proposed (question for the PO) |
+| [0008](0008-test-strategy-and-tooling.md) | Test strategy and tooling | Accepted |
+| [0009](0009-ci-cd-pipeline.md) | CI/CD pipeline | Accepted |
+| [0010](0010-toolchain-pinning-and-supply-chain.md) | Toolchain pinning and dependency supply chain | Accepted |
+| [0011](0011-validation-and-forms.md) | Validation and forms: Zod and React Hook Form | Accepted |
