@@ -81,7 +81,7 @@
 | FND-T-45 | First CI run is green (pending PO push) | tester | 9 | T-44, PO push | done (run 43361816626 green) |
 | FND-T-46 | Vercel deploy and post-deploy smoke test (pending PO push) | tester | 9 | T-45, PO Vercel setup | done (PO to check Vercel env vars in the dashboard) |
 | FND-T-47 | Gates fail on bad input | tester | 9 | T-46 | done |
-| FND-T-48 | Final acceptance, DoD 9 (pending PO push) | product-manager | 9 | T-47 | todo |
+| FND-T-48 | Final acceptance, DoD 9 | product-manager | 9 | T-47 | done (`acceptance/final.md`; PO to confirm Vercel env vars) |
 
 Count by assignee: developer 17, tester 17, product-manager 8, architect 4, ui-ux-designer 2. Total 48.
 
