@@ -1,11 +1,22 @@
 import "server-only";
 
-import { isSpanContextValid, trace } from "@opentelemetry/api";
+import {
+  isSpanContextValid,
+  logs,
+  SeverityNumber,
+  trace,
+} from "@opentelemetry/api";
 import { headers } from "next/headers";
 
 /**
  * Structured, PII-free logger (PH-FR-09, ADR 0013, ADR 0015). One call writes
  * one JSON line: `{ ...fields, ts, level, event, trace_id?, span_id?, request_id? }`.
+ *
+ * The same entry is also emitted as an OpenTelemetry log record (PH-FR-12):
+ * body is the event, attributes are the entry fields, severity follows the
+ * level, and the SDK attaches the active trace and span. Without a started SDK
+ * the logs API is a no-op. Both outputs share one sanitized entry, so the
+ * redaction rules cannot diverge.
  *
  * Why own code and not a library: the surface is tiny and the privacy rules
  * (typed primitive fields, key deny-list, errors reduced to name/code/digest)
@@ -53,6 +64,13 @@ const DENIED_KEY =
 // Depth of the `cause` chain searched for a SQLSTATE (Drizzle wraps the driver
 // error one level down, ADR 0015 spike).
 const MAX_CAUSE_DEPTH = 3;
+const SEVERITY_BY_LEVEL: Readonly<Record<LogLevel, SeverityNumber>> = {
+  debug: SeverityNumber.DEBUG,
+  info: SeverityNumber.INFO,
+  warn: SeverityNumber.WARN,
+  error: SeverityNumber.ERROR,
+};
+const OTEL_LOGGER_NAME = "nextjs-starter";
 const REQUEST_ID_HEADERS = ["x-request-id", "x-vercel-id"] as const;
 
 const truncate = (value: string): string =>
@@ -144,6 +162,32 @@ const readTraceIds = (): LogFields => {
   return { trace_id: spanContext.traceId, span_id: spanContext.spanId };
 };
 
+type LogEntry = Readonly<Record<string, LogFieldValue>>;
+
+/**
+ * Emits the entry through the OpenTelemetry logs API. Never throws: a failing
+ * exporter or provider must not affect the request (PH-AC-72), nor the stdout
+ * line, which is written independently.
+ */
+const emitToOpenTelemetry = (
+  level: LogLevel,
+  event: string,
+  entry: LogEntry,
+  timestamp: Date,
+): void => {
+  try {
+    logs.getLogger(OTEL_LOGGER_NAME).emit({
+      timestamp,
+      severityNumber: SEVERITY_BY_LEVEL[level],
+      severityText: level,
+      body: event,
+      attributes: { ...entry },
+    });
+  } catch {
+    // Intentionally ignored, see above.
+  }
+};
+
 /** Builds a logger; tests inject the sink, the clock and the request id source. */
 export function createLogger(options: LoggerOptions = {}): Logger {
   const sink = options.sink ?? writeToStdout;
@@ -159,14 +203,17 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     // (sink, header read, serialization) is swallowed on purpose.
     try {
       const requestId = await readRequestId();
+      const timestamp = now();
       const entry = {
         ...sanitizeFields(fields),
-        ts: now().toISOString(),
+        ts: timestamp.toISOString(),
         level,
         event: truncate(event),
         ...readTraceIds(),
         ...(requestId === undefined ? {} : { request_id: truncate(requestId) }),
       };
+      // The OTel emit comes first so a throwing sink cannot skip it.
+      emitToOpenTelemetry(level, entry.event, entry, timestamp);
       sink(JSON.stringify(entry));
     } catch {
       // Intentionally ignored, see above.
