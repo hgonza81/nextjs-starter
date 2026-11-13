@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./helpers/fixtures";
 
 // FND-FR-15 (one token file, light and dark) and FND-FR-16: the OS dark setting applies the dark tokens before first paint with
 // no theme script, no class and no flash.

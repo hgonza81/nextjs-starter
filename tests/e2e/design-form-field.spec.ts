@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "./helpers/fixtures";
 
 // FND-FR-16 (FormField accessibility wiring, design system 4.4 and 7.1) on
 // the working form of `/design`.

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/fixtures";
 
 // FND-FR-15, FND-T-58 I1: the auth card is lighter than the page behind it
 // in dark (surfaces get lighter as they rise) and differs from it in light.

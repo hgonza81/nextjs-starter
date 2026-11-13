@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "./helpers/fixtures";
 
 // FND-FR-16 (component states, design system 4.1): hover, active and
 // focus-visible cannot be shown statically on /design, so they are tested

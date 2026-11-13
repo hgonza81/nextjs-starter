@@ -86,7 +86,8 @@ export default defineConfig({
     ? undefined
     : [
         {
-          command: `pnpm build && pnpm exec next start --port ${port}`,
+          // The wrapper tees the server log to tests/.logs (D14).
+          command: `pnpm build && node scripts/e2e-server.mts ${port}`,
           url: `${localBaseUrl}/api/health`,
           // A stale server on the port could serve an old build: never reuse.
           reuseExistingServer: false,
@@ -102,7 +103,7 @@ export default defineConfig({
         },
         {
           // Same production build, flag unset: the Vercel production state.
-          command: `pnpm exec next start --port ${gateOffPort}`,
+          command: `node scripts/e2e-server.mts ${gateOffPort}`,
           url: `${gateOffBaseUrl}/api/health`,
           reuseExistingServer: false,
           timeout: 60_000,

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/fixtures";
 
 // FND-FR-11 (liveness) seen from outside. The post-deploy hello-world check
 // (FND-T-24) runs this file against the deployed URL with E2E_BASE_URL set.

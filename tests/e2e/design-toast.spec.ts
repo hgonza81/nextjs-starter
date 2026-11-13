@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/fixtures";
 
 // FND-FR-16 (Sonner toast, design system 4.9): exactly one provider, mounted
 // in the root layout, so a toast fired from any page appears once.

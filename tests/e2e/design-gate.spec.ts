@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/fixtures";
 
 // FND-FR-17: /design and every route below it return 404 when the server-side
 // flag is off, which is the Vercel production state. This file is the only

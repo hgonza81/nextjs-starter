@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./helpers/fixtures";
 
 // FND-FR-16 (AppShell: drawer below `md`, skip link), FND-NFR-03 (keyboard
 // operation). The app-shell frame route is the real AppShell with sample

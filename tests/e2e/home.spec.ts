@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers/fixtures";
 
 // FND-FR-19/FND-FR-20 (E2E), FND-NFR-03 (home page, light and dark).
 
