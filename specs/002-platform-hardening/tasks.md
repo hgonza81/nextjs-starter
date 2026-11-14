@@ -76,9 +76,9 @@
 | PH-T-56 | `docs/architecture.md` and ADR index confirmation | architect | 6 | T-55 | done |
 | PH-T-57 | README: collector commands and new scripts | developer | 6 | T-55 (Independent of T-56) | done |
 | PH-T-58 | Test README: seams, harness, ports | tester | 6 | T-55 (Independent of T-56, T-57) | done |
-| PH-T-59 | Full gates and CI parity | tester | 6 | T-56, T-57, T-58, T-68 | todo |
-| PH-T-60 | Final architect read | architect | 6 | T-59 | todo |
-| PH-T-61 | Final tester read | tester | 6 | T-59 (Independent of T-60) | todo |
+| PH-T-59 | Full gates and CI parity | tester | 6 | T-56, T-57, T-58, T-68 | done |
+| PH-T-60 | Final architect read | architect | 6 | T-59, T-69 | todo |
+| PH-T-61 | Final tester read | tester | 6 | T-59, T-69 (Independent of T-60) | todo |
 | PH-T-62 | Final acceptance | product-manager | 6 | T-60, T-61 | todo |
 | PH-T-63 | Fix: `request_id` missing on route-handler failures logged by the hook | developer | 1 | T-20 | done |
 | PH-T-64 | Adjust the bad-variable startup test to the relaxed PH-AC-23 | tester | 2 | T-28 | done |
@@ -86,6 +86,7 @@
 | PH-T-66 | Typed filter values in `listParams` (architect F3, Q1 option b) | developer | 5 | T-65 | done |
 | PH-T-67 | Tests: typed filters and test rename (architect F2, F3) | tester | 5 | T-66 | done |
 | PH-T-68 | Fix: `gen:module` header comment lists folders that differ from C1 | developer | 6 | T-56 | done |
+| PH-T-69 | Tests: fix PH-AC labels and close coverage gaps G1 to G3 from PH-T-59 | tester | 6 | T-59 | todo |
 
 Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-ux-designer 1. Total 62.
 
@@ -470,6 +471,17 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Out of scope:** any other generator change.
 - **Output:** `scripts/gen-module.mts` and its test if needed. Commit scope `fix(scripts)`.
 - **Dependencies:** PH-T-56.
+
+### PH-T-69 Tests: fix PH-AC labels and close coverage gaps G1 to G3
+- **Assignee:** tester
+- **Goal:** every PH-AC maps to a correctly labelled test (gaps found by PH-T-59, see `acceptance/ac-coverage.md`).
+- **Requirements:** PH-FR-22, 15, PH-AC-49 to 53, 77, 78.
+- **Read first:** `specs/002-platform-hardening/acceptance/ac-coverage.md` (gaps section G1, G2, G3), `tests/scripts/gen-module.test.ts`, spec PH-AC-49..53, 77, 78, `tests/e2e/helpers/fixtures.ts`, `tests/e2e/error-pages.spec.ts`, `tests/e2e/design-a11y.spec.ts`, `tests/lint/boundaries.test.ts`.
+- **Do:** (G1) relabel the PH-AC ids in `tests/scripts/gen-module.test.ts` to match the spec (49 lint/typecheck of the generated file, 50 a deep import into a generated module is reported by lint, 51 an existing module is never overwritten, 52 invalid names, 53 no sample business feature) and add one test for the PH-AC-50 deep-import case; (G2) make the PH-AC-77 StatusPage showcase test, or an adjacent one with the PH-AC-77 label, run axe in light and dark on the `/design` StatusPage section; (G3) add a test proving the base fixture fails a test on a CSP violation (for example a spec that provokes a violation without opting out, wrapped in `test.fail()` so the suite is green only if the fixture really fails it; keep it small and parallel-safe), labelled PH-AC-78. Then update `acceptance/ac-coverage.md` gap section and rows accordingly.
+- **Acceptance:** `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`, `pnpm test:e2e` (twice, one at a time) pass; ac-coverage.md has no gap.
+- **Out of scope:** production code changes.
+- **Output:** test files, `acceptance/ac-coverage.md`. Commit scope `test(...)`.
+- **Dependencies:** PH-T-59.
 
 ### PH-T-29 E2E: telemetry with receiver and closed port
 - **Assignee:** tester
@@ -921,3 +933,4 @@ Every PH-FR and PH-NFR appears at least once as a build task and once as a verif
 | 2026-11-13 | PH-T-44 closed without a separate agent: its tests (trigger, allowlist, guard-of-the-guard) were delivered by PH-T-43; the remaining PH-AC-36 check (`pnpm db:reset`, `pnpm db:schema`, empty `git diff src/db`, `pnpm test:db` 265 passed) was run by the orchestrator. |
 | 2026-11-13 | Added PH-T-65, PH-T-66, PH-T-67 from the step 5 architect review (shared `fieldErrorsFromZod`, typed filter values in `listParams`, tests and a test rename); PH-T-52 now depends on them. Total 67 tasks. |
 | 2026-11-13 | Added PH-T-68 (gen:module header comment must list the C1 folders), found by the PH-T-56 architect check; PH-T-59 now depends on it. Total 68 tasks. |
+| 2026-11-13 | Added PH-T-69 (relabel gen:module test criteria, close coverage gaps G1 to G3 found by PH-T-59); PH-T-60 and PH-T-61 now depend on it. Total 69 tasks. |
