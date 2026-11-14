@@ -5,7 +5,7 @@ Each big block of functionality (an "epic") lives in its own numbered folder. Ep
 | # | Epic | Summary | Status |
 |---|------|---------|--------|
 | 001 | [foundations](001-foundations/requirements.md) | Basic Next.js skeleton, Supabase database + CLI, Docker, frontend stack and design system, testing, CI/CD and security checks. Many decisions still open. | Done (see [final acceptance](001-foundations/acceptance/final.md)) |
-| 002 | [platform-hardening](002-platform-hardening/requirements.md) | Foundations that remain before the first module: error handling, structured logging and OpenTelemetry, security headers, database conventions, module scaffold. No cloud. | Spec and tasks approved; steps 1 to 6 implemented, final acceptance pending (PH-T-62) |
+| 002 | [platform-hardening](002-platform-hardening/requirements.md) | Foundations that remain before the first module: error handling, structured logging and OpenTelemetry, security headers, database conventions, module scaffold. No cloud. | Done pending Product Owner push and CI verification (see [final acceptance](002-platform-hardening/acceptance/final.md)) |
 | 003 | [auth-memberships](003-auth-memberships/requirements.md) | Sign-up, login, empty dashboard, tenants and memberships | High-level requirements (to be re-reviewed under the simplified workflow; depends on 002) |
 
 > **Renumbering note (2026-11-13):** auth and memberships was first planned as epic 002 and is now epic 003. Mentions of "epic 002" in the epic 001 documents, ADRs 0001-0011 and older code comments mean what is now 003-auth-memberships. They are left as written to preserve history.
@@ -141,3 +141,13 @@ Prefixed by epic and stage. High-level requirements: `FND-HR-01`. Flows: `FND-FL
 ## Cross-cutting docs
 
 Architecture, design system, and decisions are shared across epics and live in `docs/` (`docs/architecture.md`, `docs/design-system.md`, `docs/design/`, `docs/adr/`).
+
+## Lessons from epic 002 (process notes)
+
+- Run acceptance and documentation checks with an agent that has a shell: agents without one cannot re-run gates or commit, so the orchestrator formats, lints and commits their files.
+- A fresh agent's report may arrive empty: always verify a task by the git state (commit, files, trailers) and re-run the gates, not by the report.
+- Put a spike first in each risky area; it disproved assumptions early (OpenTelemetry versions, 413 status, `/design` iframes, Zod JIT) at low cost.
+- Test error and security behavior on a production build (`pnpm build` + `next start`); the dev server hides it.
+- Record every fix task in the spec change log, and record the epic's base commit so the scope check is one command (`git diff --stat <base>..HEAD`).
+- Do not run two E2E runs at once: they share ports.
+

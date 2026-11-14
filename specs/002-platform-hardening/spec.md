@@ -1,6 +1,6 @@
 # 002 - Platform hardening: specification
 
-**Status:** Approved (Product Owner, 2026-11-13: C1-C4 confirmed)
+**Status:** Done pending Product Owner push and CI verification (approved 2026-11-13, C1-C4 confirmed; implemented; final acceptance in `acceptance/final.md`; the real GitHub CI run, PH-AC-54, is the one open item)
 **Epic:** 002-platform-hardening. Depends on 001-foundations. Next epic: 003-auth-memberships.
 **Inputs:** `requirements.md`, `flows.md`, `reviews/round1/*`, `questions.md` (decisions C1, C2, D1-D17), `traceability.md`.
 **Requirement IDs:** high-level `PH-HR-xx` (in `requirements.md`), spec level `PH-FR-xx` / `PH-NFR-xx`. Acceptance criteria keep the `PH-AC-xx` IDs from `flows.md` (PH-AC-48 dropped, never reused; PH-AC-58 onward are new). Flow IDs `PH-FL-xx` and business rules `BR-xx` are in `flows.md`.
@@ -319,3 +319,4 @@ None blocking beyond C1 to C4 at the top. Revertible defaults are D1-D17 (sectio
 | 2026-11-13 | PH-AC-78 wording updated (found by PH-T-40): five tests provoke violations on purpose, not two. |
 | 2026-11-13 | Final architect read (PH-T-60), wording only: removed a corrupted duplicate row fragment after PH-FR-15; section 10 dependency count corrected to what was built (one direct OpenTelemetry package plus one devDependency). No requirement or criterion changed. |
 | 2026-11-13 | PH-FR-20 extended by decision of the orchestrator (Product Owner delegated technical decisions; step 5 architect review Q1, option b): filters in `listParams` may carry a per-field Zod string schema (`z.uuid()`, `z.enum(...)`) so that a wrongly typed value from the URL returns `validation` before any query; the plain list of names (untyped strings) remains valid. Mapping 22P02 globally was rejected (it hides real bugs). |
+| 2026-11-13 | Final acceptance (PH-T-62): epic accepted pending the real CI run (PH-AC-54). Fix tasks PH-T-65 (shared `fieldErrorsFromZod`), PH-T-67 (tests for typed filters), PH-T-68 (`gen:module` header lists the C1 folders) and PH-T-69 (PH-AC labels, coverage gaps G1 to G3) are logged here; none changes a requirement or behavior. PH-FR-19 and PH-FR-20 text stays as approved: the explicit `ON DELETE` guard rule, reserved filter keys and `parseListParams` are recorded in ADRs 0012 and 0016. |

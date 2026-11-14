@@ -37,3 +37,10 @@ Consolidated from `reviews/round1/` (architect, developer, ui-ux-designer, teste
 ## Open risks to verify in the first tasks (spikes)
 
 `sdk-node` under Turbopack and Node 26; Drizzle error `cause` shape against the real database; a `"use server"` file exporting `defineAction(...)` results; whether `global-error` receives the nonce; `onRequestError` not firing for `redirect()`/`notFound()`; the proxy running on Node.
+
+## Confirmations given by the Product Owner in conversation (2026-11-13)
+
+- C1 to C4 confirmed with the recommended options.
+- The framework's raw error output limit (Next.js prints the thrown error, message and stack, to the server output before our hook runs; it never reaches the client and our structured logs never contain it) is **accepted as a documented limit** (ADR 0015, README), with the mitigation rules recorded there.
+- Technical decisions taken by the orchestrator on the Product Owner's delegation, all logged in the spec change log: relaxed PH-AC-23 (process stays alive and answers 500), PH-AC-30 (non-2xx), clarified PH-AC-32 (strict-dynamic), `/design/frames/*` framing exception, typed filters in `listParams`, Zod `jitless`.
+
