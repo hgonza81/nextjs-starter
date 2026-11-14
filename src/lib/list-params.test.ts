@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { AppError } from "@/lib/errors";
 import { listParams, parseListParams } from "@/lib/list-params";
@@ -232,6 +233,100 @@ describe("listParams rejections (PH-AC-39, 40)", () => {
 
     expect(() => run({ page: "10001" })).toThrow(AppError);
     expect(tx).not.toHaveBeenCalled();
+  });
+});
+
+describe("listParams typed filters, record form (PH-FR-20, PH-AC-40)", () => {
+  const VALID_UUID = "123e4567-e89b-42d3-a456-426614174000";
+
+  const typedSchema = () =>
+    listParams({
+      sortable: ["name", "created_at"],
+      filters: {
+        owner_id: z.uuid(),
+        status: z.enum(["active", "archived"]),
+      },
+      defaultSort: { field: "created_at", dir: "desc" },
+    });
+
+  it("PH-FR-20: accepts valid uuid and enum values and passes them through as strings", () => {
+    const parsed = parseListParams(typedSchema(), {
+      owner_id: VALID_UUID,
+      status: "archived",
+    });
+
+    expect(parsed.filters).toStrictEqual({
+      owner_id: VALID_UUID,
+      status: "archived",
+    });
+  });
+
+  it("PH-FR-20: omits typed filters that were not supplied", () => {
+    expect(parseListParams(typedSchema(), {}).filters).toStrictEqual({});
+  });
+
+  it.each([
+    ["owner_id", "not-a-uuid"],
+    ["owner_id", "123e4567-e89b-42d3-a456-42661417400"],
+    ["status", "deleted"],
+    ["status", "ACTIVE"],
+  ])(
+    "PH-AC-40: rejects the wrongly typed filter %s=%j as validation with the field under fieldErrors",
+    (key, value) => {
+      const error = failure({ [key]: value }, typedSchema());
+
+      expect(error.type).toBe("validation");
+      expect(error.fieldErrors).toHaveProperty(key);
+    },
+  );
+
+  it("PH-AC-40: still rejects an empty value for a typed filter", () => {
+    const error = failure({ owner_id: "" }, typedSchema());
+
+    expect(error.type).toBe("validation");
+    expect(error.fieldErrors).toHaveProperty("owner_id");
+  });
+
+  it("PH-AC-40: rejects a repeated key for a typed filter", () => {
+    expect(
+      failure({ status: ["active", "archived"] }, typedSchema()).type,
+    ).toBe("validation");
+  });
+
+  it("PH-AC-40: rejects an unknown filter key next to typed filters", () => {
+    expect(failure({ password: "x" }, typedSchema()).type).toBe("validation");
+  });
+
+  it("PH-AC-39: a failing typed filter fails before the query callback could run", () => {
+    const tx = vi.fn();
+    const run = (input: unknown) => {
+      const params = parseListParams(typedSchema(), input);
+      tx(params);
+    };
+
+    expect(() => run({ owner_id: "not-a-uuid" })).toThrow(AppError);
+    expect(tx).not.toHaveBeenCalled();
+  });
+
+  it.each(["page", "pageSize", "sort", "dir"])(
+    "PH-FR-20: throws a plain Error when a record key is the reserved name %s",
+    (name) => {
+      const build = () =>
+        listParams({
+          sortable: ["name"],
+          filters: { [name]: z.string() },
+          defaultSort: { field: "name", dir: "asc" },
+        });
+
+      expect(build).toThrow(Error);
+      expect(build).not.toThrow(AppError);
+    },
+  );
+
+  it("PH-FR-20: the array form still accepts any non-empty string", () => {
+    expect(
+      parseListParams(schema(), { status: "not-a-uuid" }).filters,
+    ).toStrictEqual({ status: "not-a-uuid" });
   });
 });
 

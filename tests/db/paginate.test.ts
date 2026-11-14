@@ -313,7 +313,7 @@ describe("PH-AC-42: RLS applies to rows and to the count", () => {
     expect(page).toMatchObject({ rows: [], total: 0, pageCount: 0 });
   });
 
-  it("PH-AC-42: the page and count queries see one consistent snapshot in the same transaction", async () => {
+  it("PH-AC-42: documents READ COMMITTED behavior, a concurrent insert appears in the second paginate call of the same transaction (ADR 0016)", async () => {
     const user = createTestUser();
     const { items, columns, spec } = await createItems(numbers(5, user.id));
 
