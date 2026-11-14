@@ -73,10 +73,10 @@
 | PH-T-53 | `gen:module` script | developer | 6 | T-52 | done |
 | PH-T-54 | Tests: `gen:module` | tester | 6 | T-53 | done |
 | PH-T-55 | CI smoke step for `gen:module` | developer | 6 | T-54 | done |
-| PH-T-56 | `docs/architecture.md` and ADR index confirmation | architect | 6 | T-55 | todo |
-| PH-T-57 | README: collector commands and new scripts | developer | 6 | T-55 (Independent of T-56) | todo |
+| PH-T-56 | `docs/architecture.md` and ADR index confirmation | architect | 6 | T-55 | done |
+| PH-T-57 | README: collector commands and new scripts | developer | 6 | T-55 (Independent of T-56) | done |
 | PH-T-58 | Test README: seams, harness, ports | tester | 6 | T-55 (Independent of T-56, T-57) | todo |
-| PH-T-59 | Full gates and CI parity | tester | 6 | T-56, T-57, T-58 | todo |
+| PH-T-59 | Full gates and CI parity | tester | 6 | T-56, T-57, T-58, T-68 | todo |
 | PH-T-60 | Final architect read | architect | 6 | T-59 | todo |
 | PH-T-61 | Final tester read | tester | 6 | T-59 (Independent of T-60) | todo |
 | PH-T-62 | Final acceptance | product-manager | 6 | T-60, T-61 | todo |
@@ -85,6 +85,7 @@
 | PH-T-65 | Fix: one shared `fieldErrorsFromZod` helper (architect F1) | developer | 5 | T-51 | done |
 | PH-T-66 | Typed filter values in `listParams` (architect F3, Q1 option b) | developer | 5 | T-65 | done |
 | PH-T-67 | Tests: typed filters and test rename (architect F2, F3) | tester | 5 | T-66 | done |
+| PH-T-68 | Fix: `gen:module` header comment lists folders that differ from C1 | developer | 6 | T-56 | todo |
 
 Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-ux-designer 1. Total 62.
 
@@ -458,6 +459,17 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Out of scope:** production code changes.
 - **Output:** the two test files. Commit scope `test(lib)`.
 - **Dependencies:** PH-T-66.
+
+### PH-T-68 Fix: `gen:module` header comment folders must match C1
+- **Assignee:** developer
+- **Goal:** the generated `index.ts` header names the folders that C1 defines (found by the PH-T-56 architect check).
+- **Requirements:** PH-FR-22, PH-FR-24.
+- **Read first:** `scripts/gen-module.mts` (`INDEX_CONTENT`), `docs/architecture.md` C1, `tests/scripts/gen-module.test.ts`.
+- **Do:** change the folder list in the generated header from "actions, schemas, services, data, components" to the C1 list `actions, queries, schemas, components` (and keep the sentence that folders are created only when they have content); update any test that asserts the old text.
+- **Acceptance:** the generated header matches C1; lint, typecheck, format:check and unit tests pass.
+- **Out of scope:** any other generator change.
+- **Output:** `scripts/gen-module.mts` and its test if needed. Commit scope `fix(scripts)`.
+- **Dependencies:** PH-T-56.
 
 ### PH-T-29 E2E: telemetry with receiver and closed port
 - **Assignee:** tester
@@ -908,3 +920,4 @@ Every PH-FR and PH-NFR appears at least once as a build task and once as a verif
 | 2026-11-13 | Spike PH-T-33 decisions applied (status table: PH-T-33 done; other statuses unchanged; no tasks added). T-34: `/design/frames/*` `frame-ancestors 'self'` variant, root layout `connection()`, `z.config({ jitless: true })` module imported first in client form files, `global-error` needs no fallback, `/api/*` no-CSP limit. T-35: `experimental.serverActions.bodySizeLimit`, `X-Frame-Options` `SAMEORIGIN` for `/design/frames/:path*` and `DENY` elsewhere. T-36/T-37: new PH-AC-79 and `experimental` config key. T-38: PH-AC-30 relaxed (non-2xx, 413 in the log). T-39 and T-56: record outcomes and the jitless convention in `docs/architecture.md`. Traceability rows updated. |
 | 2026-11-13 | PH-T-44 closed without a separate agent: its tests (trigger, allowlist, guard-of-the-guard) were delivered by PH-T-43; the remaining PH-AC-36 check (`pnpm db:reset`, `pnpm db:schema`, empty `git diff src/db`, `pnpm test:db` 265 passed) was run by the orchestrator. |
 | 2026-11-13 | Added PH-T-65, PH-T-66, PH-T-67 from the step 5 architect review (shared `fieldErrorsFromZod`, typed filter values in `listParams`, tests and a test rename); PH-T-52 now depends on them. Total 67 tasks. |
+| 2026-11-13 | Added PH-T-68 (gen:module header comment must list the C1 folders), found by the PH-T-56 architect check; PH-T-59 now depends on it. Total 68 tasks. |
