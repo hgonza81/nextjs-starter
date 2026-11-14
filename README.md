@@ -79,6 +79,9 @@ variable.
 | `pnpm db:stop`       | Stops local Supabase                                                                                                |
 | `pnpm db:reset`      | Recreates the local database from migrations and seed                                                               |
 | `pnpm db:status`     | Shows local Supabase status and keys                                                                                |
+| `pnpm obs:start`     | Starts the optional local telemetry collector (Docker); see below                                                   |
+| `pnpm obs:stop`      | Stops and removes it                                                                                                |
+| `pnpm gen:module`    | Creates `src/modules/<name>/index.ts`; see below                                                                    |
 | `pnpm db:schema`     | Regenerates `src/db/schema/` from the database (`drizzle-kit pull`); needs `DATABASE_MIGRATION_URL` in `.env.local` |
 
 Notes on the database commands:
@@ -111,6 +114,50 @@ E2E needs the three `NEXT_PUBLIC_*` variables (`NEXT_PUBLIC_SUPABASE_URL`,
 first (the values in `.env.example` are fine). E2E uses port 3100, so it does
 not collide with `pnpm dev`.
 
+## Creating a module
+
+```bash
+pnpm gen:module billing   # creates src/modules/billing/index.ts
+```
+
+The name must be kebab-case. Only `index.ts` (the module's public API) is
+created, with no subfolders, sample code or tests; an existing module is never
+touched. Add subfolders when they have content.
+
+## Local telemetry (optional)
+
+Telemetry is off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. The app, the
+tests and CI never need the collector. To inspect traces and logs locally
+(Docker required):
+
+```bash
+pnpm obs:start   # Grafana LGTM on http://127.0.0.1:3001 (admin / admin)
+# add the OTEL_* lines below to .env.local, then restart pnpm dev
+pnpm obs:stop    # stops it and discards its data
+```
+
+The variables are all optional and validated at startup (the values below are
+the local ones; `.env.example` documents them):
+
+- `OTEL_EXPORTER_OTLP_ENDPOINT` (for example `http://127.0.0.1:4318`): turns
+  telemetry on.
+- `OTEL_EXPORTER_OTLP_PROTOCOL`: `http/protobuf` (default) or `http/json`.
+- `OTEL_SERVICE_NAME`: defaults to `nextjs-starter`.
+
+Details, ports and how to read traces and logs:
+[docker/observability/README.md](docker/observability/README.md).
+
+Limits worth knowing:
+
+- Next.js prints the raw error (message and stack) of an unhandled server
+  error to stdout before our error hook runs. Our structured logs never contain
+  it, but in production it can reach the platform log, so never put personal
+  data or secrets in error messages (ADR 0015, "Known limit, raw framework
+  output").
+- If a telemetry variable is invalid, `register()` fails but Next.js keeps the
+  process alive: every request answers 500 and the log names the variable
+  (never its value).
+
 ## The `/design` page
 
 `/design` is a living showcase of the design system (`docs/design-system.md`):
@@ -121,6 +168,8 @@ tokens, components and patterns in light and dark panels. It is controlled by
 - `true`/`false`/`1`/`0` overrides that default.
 - Never set it on Vercel and never prefix it with `NEXT_PUBLIC_` (that would
   bake it into the build).
+- Keep it off in real deployments: `/design` and the fault fixtures used by
+  the tests are for development and CI only.
 
 ## Browser support (`browserslist` rule)
 
