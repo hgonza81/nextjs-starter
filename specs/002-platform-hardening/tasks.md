@@ -1,7 +1,7 @@
 # 002 - Platform hardening: tasks
 
 **Status:** Approved (spec and tasks approved by the Product Owner on 2026-11-13; execution started)
-**Spec:** [spec.md](spec.md) (Draft, round 2 fixes applied 2026-11-13). IDs: `PH-T-NN`; requirements `PH-FR-NN` / `PH-NFR-NN`; criteria `PH-AC-NN` (section 8 of the spec plus `flows.md` section 6).
+**Spec:** [spec.md](spec.md) (Approved, round 2 fixes applied 2026-11-13). IDs: `PH-T-NN`; requirements `PH-FR-NN` / `PH-NFR-NN`; criteria `PH-AC-NN` (section 8 of the spec plus `flows.md` section 6).
 **Execution rules** (`specs/README.md`, "Task execution"): every task is run by a NEW agent with a fresh context, sequentially by default, hand-off through files only. The orchestrator updates the Status column after each task. A task that fails verification is not reopened in place: the orchestrator adds a fix task (next free ID) for a new agent and re-runs the verification.
 
 ## 0. Notes before starting
@@ -77,8 +77,8 @@
 | PH-T-57 | README: collector commands and new scripts | developer | 6 | T-55 (Independent of T-56) | done |
 | PH-T-58 | Test README: seams, harness, ports | tester | 6 | T-55 (Independent of T-56, T-57) | done |
 | PH-T-59 | Full gates and CI parity | tester | 6 | T-56, T-57, T-58, T-68 | done |
-| PH-T-60 | Final architect read | architect | 6 | T-59, T-69 | todo |
-| PH-T-61 | Final tester read | tester | 6 | T-59, T-69 (Independent of T-60) | todo |
+| PH-T-60 | Final architect read | architect | 6 | T-59, T-69 | done |
+| PH-T-61 | Final tester read | tester | 6 | T-59, T-69 (Independent of T-60) | done |
 | PH-T-62 | Final acceptance | product-manager | 6 | T-60, T-61 | todo |
 | PH-T-63 | Fix: `request_id` missing on route-handler failures logged by the hook | developer | 1 | T-20 | done |
 | PH-T-64 | Adjust the bad-variable startup test to the relaxed PH-AC-23 | tester | 2 | T-28 | done |
