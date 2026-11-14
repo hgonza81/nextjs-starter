@@ -67,7 +67,7 @@
 | PH-T-47 | `listParams` | developer | 5 | T-46 | done |
 | PH-T-48 | `paginate` | developer | 5 | T-47 | done |
 | PH-T-49 | Tests: `listParams` | tester | 5 | T-47 (Independent of T-48) | done |
-| PH-T-50 | Tests: `paginate` | tester | 5 | T-48 | todo |
+| PH-T-50 | Tests: `paginate` | tester | 5 | T-48 | done |
 | PH-T-51 | Architect check of step 5 and ADR 0016 confirmation | architect | 5 | T-49, T-50 | todo |
 | PH-T-52 | Accept step 5 | product-manager | 5 | T-51 | todo |
 | PH-T-53 | `gen:module` script | developer | 6 | T-52 | todo |
