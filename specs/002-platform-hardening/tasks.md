@@ -52,7 +52,7 @@
 | PH-T-32 | Accept step 2 | product-manager | 2 | T-31 | done |
 | PH-T-33 | Spike: nonce reaches Next scripts, `global-error` nonce, proxy on Node, 413 | developer | 3 | T-32 | done |
 | PH-T-34 | CSP builder and `src/proxy.ts` | developer | 3 | T-33 | done |
-| PH-T-35 | Static headers and config hardening | developer | 3 | T-33 (Independent of T-34) | todo |
+| PH-T-35 | Static headers and config hardening | developer | 3 | T-33 (Independent of T-34) | done |
 | PH-T-36 | Tests: CSP policy and config (unit) | tester | 3 | T-34, T-35 | todo |
 | PH-T-37 | E2E: CSP, headers, nonce; global violation fixture | tester | 3 | T-36 | todo |
 | PH-T-38 | E2E: Server Action origin and body size | tester | 3 | T-37 | todo |
