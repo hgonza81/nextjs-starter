@@ -64,7 +64,7 @@
 | PH-T-44 | Tests: trigger, guard allowlist, guard-of-the-guard | tester | 4 | T-43 | done |
 | PH-T-45 | Architect check of step 4 and ADR 0012 confirmation | architect | 4 | T-44 | done |
 | PH-T-46 | Accept step 4 | product-manager | 4 | T-45 | done |
-| PH-T-47 | `listParams` | developer | 5 | T-46 | todo |
+| PH-T-47 | `listParams` | developer | 5 | T-46 | done |
 | PH-T-48 | `paginate` | developer | 5 | T-47 | todo |
 | PH-T-49 | Tests: `listParams` | tester | 5 | T-47 (Independent of T-48) | todo |
 | PH-T-50 | Tests: `paginate` | tester | 5 | T-48 | todo |
