@@ -37,8 +37,16 @@ export type ListParams<Sortable extends string, Filter extends string> = {
 type ListParamsConfig<Sortable extends string, Filter extends string> = {
   /** Fields the caller may sort by; must be non-empty. */
   readonly sortable: readonly [Sortable, ...Sortable[]];
-  /** Fields the caller may filter on by equality. */
-  readonly filters: readonly Filter[];
+  /**
+   * Fields the caller may filter on by equality: either names (any non-empty
+   * string is accepted; fine for text columns) or a record of name to Zod
+   * string schema (for example `z.uuid()`, `z.enum([...])`) that rejects a
+   * wrongly typed value before any query runs. The schemas are created by the
+   * caller (see the zod-jitless rule above).
+   */
+  readonly filters:
+    | readonly Filter[]
+    | { readonly [Field in Filter]: z.ZodType<string, string> };
   readonly defaultSort: {
     readonly field: Sortable;
     readonly dir: SortDirection;
@@ -92,7 +100,15 @@ export function listParams<Sortable extends string, Filter extends string>(
   if (!config.sortable.includes(config.defaultSort.field)) {
     throw new Error("listParams: defaultSort.field must be sortable.");
   }
-  const reservedFilter = config.filters.find((field) =>
+  const filters = config.filters;
+  // `Array.isArray` does not narrow a union with a readonly array.
+  const isNameList = (value: typeof filters): value is readonly Filter[] =>
+    Array.isArray(value);
+  // `Object.keys` loses the key type; the record is typed `{ [Field in Filter]: ... }`.
+  const filterNames: readonly Filter[] = isNameList(filters)
+    ? filters
+    : (Object.keys(filters) as Filter[]);
+  const reservedFilter = filterNames.find((field) =>
     RESERVED_KEYS.includes(field),
   );
   if (reservedFilter !== undefined) {
@@ -101,11 +117,16 @@ export function listParams<Sortable extends string, Filter extends string>(
     );
   }
 
+  // Empty values are rejected first, then the typed schema (if any) runs.
+  const nonEmpty = (field: string) =>
+    z.string().min(1, `${field} must not be empty.`);
   const filterShape = Object.fromEntries(
-    config.filters.map((field) => [
-      field,
-      z.string().min(1, `${field} must not be empty.`).optional(),
-    ]),
+    filterNames.map((field) => {
+      const valueSchema = isNameList(filters)
+        ? nonEmpty(field)
+        : nonEmpty(field).pipe(filters[field]);
+      return [field, valueSchema.optional()];
+    }),
   );
 
   return z
@@ -120,7 +141,7 @@ export function listParams<Sortable extends string, Filter extends string>(
       const filters: Partial<Record<Filter, string>> = {};
       // The dynamic filter keys are not visible in the inferred object type.
       const raw: Readonly<Record<string, unknown>> = input;
-      for (const field of config.filters) {
+      for (const field of filterNames) {
         const value = raw[field];
         if (typeof value === "string") {
           filters[field] = value;
