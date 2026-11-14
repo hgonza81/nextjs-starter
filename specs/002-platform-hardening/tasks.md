@@ -61,7 +61,7 @@
 | PH-T-41 | Spike: trigger clock and `set_updated_at` under the default-privilege revoke | developer | 4 | T-40 | done |
 | PH-T-42 | Migration: `public.set_updated_at()` | developer | 4 | T-41 | done |
 | PH-T-43 | Convention guard rules in the schema guard | tester | 4 | T-42 | done |
-| PH-T-44 | Tests: trigger, guard allowlist, guard-of-the-guard | tester | 4 | T-43 | todo |
+| PH-T-44 | Tests: trigger, guard allowlist, guard-of-the-guard | tester | 4 | T-43 | done |
 | PH-T-45 | Architect check of step 4 and ADR 0012 confirmation | architect | 4 | T-44 | todo |
 | PH-T-46 | Accept step 4 | product-manager | 4 | T-45 | todo |
 | PH-T-47 | `listParams` | developer | 5 | T-46 | todo |
@@ -870,3 +870,4 @@ Every PH-FR and PH-NFR appears at least once as a build task and once as a verif
 | 2026-11-13 | Added fix task PH-T-63 (route-handler failures lacked `request_id`, found by PH-T-20); PH-T-21 now depends on it. Total 63 tasks. |
 | 2026-11-13 | Added PH-T-64 (relaxed PH-AC-23: Next.js 16 does not exit on an invalid OTEL_* value). Total 64 tasks. |
 | 2026-11-13 | Spike PH-T-33 decisions applied (status table: PH-T-33 done; other statuses unchanged; no tasks added). T-34: `/design/frames/*` `frame-ancestors 'self'` variant, root layout `connection()`, `z.config({ jitless: true })` module imported first in client form files, `global-error` needs no fallback, `/api/*` no-CSP limit. T-35: `experimental.serverActions.bodySizeLimit`, `X-Frame-Options` `SAMEORIGIN` for `/design/frames/:path*` and `DENY` elsewhere. T-36/T-37: new PH-AC-79 and `experimental` config key. T-38: PH-AC-30 relaxed (non-2xx, 413 in the log). T-39 and T-56: record outcomes and the jitless convention in `docs/architecture.md`. Traceability rows updated. |
+| 2026-11-13 | PH-T-44 closed without a separate agent: its tests (trigger, allowlist, guard-of-the-guard) were delivered by PH-T-43; the remaining PH-AC-36 check (`pnpm db:reset`, `pnpm db:schema`, empty `git diff src/db`, `pnpm test:db` 265 passed) was run by the orchestrator. |
