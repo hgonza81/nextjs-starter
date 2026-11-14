@@ -47,7 +47,7 @@ function tree(dir: string): string[] {
     .sort();
 }
 
-describe("PH-AC-49, 50: a valid name creates only index.ts with the header", () => {
+describe("PH-AC-49, 53: a valid name creates only index.ts with the header", () => {
   it("PH-AC-49: creates exactly src/modules/orders/index.ts and nothing else", () => {
     const result = generateModule(tmp, "orders");
 
@@ -63,7 +63,7 @@ describe("PH-AC-49, 50: a valid name creates only index.ts with the header", () 
     ]);
   });
 
-  it("PH-AC-50: index.ts holds the header comment and an empty export", () => {
+  it("PH-AC-53: index.ts holds the header comment and an empty export (no sample business feature)", () => {
     generateModule(tmp, "orders");
 
     const content = readFileSync(
@@ -104,7 +104,7 @@ describe("PH-AC-49, 50: a valid name creates only index.ts with the header", () 
   });
 });
 
-describe("PH-AC-51: an invalid name stops with a message and changes nothing", () => {
+describe("PH-AC-52: an invalid name stops with a message and changes nothing", () => {
   it.each([
     ["empty", ""],
     ["whitespace only", "   "],
@@ -144,7 +144,7 @@ describe("PH-AC-51: an invalid name stops with a message and changes nothing", (
   });
 });
 
-describe("PH-AC-52: an existing module is never overwritten", () => {
+describe("PH-AC-51: an existing module is never overwritten", () => {
   it("a second call on the same name fails and leaves the first file untouched", () => {
     const first = generateModule(tmp, "orders");
     if (!first.ok) throw new Error("setup failed");
@@ -172,7 +172,7 @@ describe("PH-AC-52: an existing module is never overwritten", () => {
   });
 });
 
-describe("PH-AC-53: boundary lint rules and TypeScript apply to a generated module", () => {
+describe("PH-AC-49, 50: lint, typecheck and boundary rules apply to a generated module", () => {
   // Virtual file: `import/no-cycle` cannot resolve files that do not exist.
   const eslint = new ESLint({
     cwd: repoRoot,
@@ -198,7 +198,7 @@ describe("PH-AC-53: boundary lint rules and TypeScript apply to a generated modu
     return readFileSync(result.indexPath, "utf8");
   }
 
-  it("the generated index.ts has no lint findings", async () => {
+  it("PH-AC-49: the generated index.ts has no lint findings", async () => {
     expect(
       await lintAsModuleIndex("order-items", generatedContent("order-items")),
     ).toEqual([]);
@@ -211,7 +211,7 @@ describe("PH-AC-53: boundary lint rules and TypeScript apply to a generated modu
     ],
     ["relative path out of the module", 'import { x } from "../auth/service";'],
     ["raw db internals", 'import { x } from "@/db/client";'],
-  ])("an added %s fails lint", async (_label, line) => {
+  ])("PH-AC-50: an added %s fails lint", async (_label, line) => {
     const code = `${generatedContent("orders")}\n${line}\nexport const y = x;\n`;
 
     expect(await lintAsModuleIndex("orders", code)).toContain(
@@ -219,13 +219,23 @@ describe("PH-AC-53: boundary lint rules and TypeScript apply to a generated modu
     );
   });
 
-  it("an added import through another module's public API passes lint", async () => {
+  it("PH-AC-50: a deep import into a generated module from another module is reported by lint", async () => {
+    generatedContent("orders");
+    const code =
+      'import { x } from "@/modules/orders/service";\nexport const y = x;\n';
+
+    expect(await lintAsModuleIndex("billing", code)).toContain(
+      "no-restricted-imports",
+    );
+  });
+
+  it("PH-AC-50: an added import through another module's public API passes lint", async () => {
     const code = `${generatedContent("orders")}\nimport { x } from "@/modules/auth";\nexport const y = x;\n`;
 
     expect(await lintAsModuleIndex("orders", code)).toEqual([]);
   });
 
-  it("the generated index.ts is valid TypeScript under strict settings", () => {
+  it("PH-AC-49: the generated index.ts is valid TypeScript under strict settings", () => {
     const result = generateModule(tmp, "orders");
     if (!result.ok) throw new Error(result.error);
 
@@ -249,7 +259,7 @@ describe("PH-AC-53: boundary lint rules and TypeScript apply to a generated modu
   });
 });
 
-describe("PH-AC-51: the CLI exits non-zero with a message on bad input", () => {
+describe("PH-AC-52: the CLI exits non-zero with a message on bad input", () => {
   // These paths exit before anything is written, so running against the repo
   // root (the CLI has no root override) is safe; each test asserts that.
   function run(...args: string[]) {

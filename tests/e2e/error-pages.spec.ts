@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { expectNoAxeViolations } from "./helpers/axe";
+import AxeBuilder from "@axe-core/playwright";
+
+import { WCAG_TAGS, expectNoAxeViolations } from "./helpers/axe";
 import { expect, test, type Page } from "./helpers/fixtures";
 
 // PH-FR-01, 02, 03, 04, 23 and PH-NFR-04: the 500, global error and 404 pages
@@ -280,4 +282,24 @@ test.describe("StatusPage on /design", () => {
     ).toHaveCount(2);
     await expect(section.getByText("1234567890")).toHaveCount(2);
   });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    test.describe(`in ${colorScheme} OS mode`, () => {
+      test.use({ colorScheme });
+
+      test(`PH-AC-77: the StatusPage section has no axe violations in ${colorScheme}`, async ({
+        page,
+      }) => {
+        await page.goto("/design");
+        await expect(page.locator("#status-page")).toBeVisible();
+
+        const results = await new AxeBuilder({ page })
+          .include("#status-page")
+          .withTags([...WCAG_TAGS])
+          .analyze();
+
+        expect(results.violations).toEqual([]);
+      });
+    });
+  }
 });
