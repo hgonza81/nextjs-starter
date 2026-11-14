@@ -58,7 +58,7 @@
 | PH-T-38 | E2E: Server Action origin and body size | tester | 3 | T-37 | done |
 | PH-T-39 | Architect check of step 3 and ADR 0014 confirmation | architect | 3 | T-37, T-38 | done |
 | PH-T-40 | Accept step 3 | product-manager | 3 | T-39 | done |
-| PH-T-41 | Spike: trigger clock and `set_updated_at` under the default-privilege revoke | developer | 4 | T-40 | todo |
+| PH-T-41 | Spike: trigger clock and `set_updated_at` under the default-privilege revoke | developer | 4 | T-40 | done |
 | PH-T-42 | Migration: `public.set_updated_at()` | developer | 4 | T-41 | todo |
 | PH-T-43 | Convention guard rules in the schema guard | tester | 4 | T-42 | todo |
 | PH-T-44 | Tests: trigger, guard allowlist, guard-of-the-guard | tester | 4 | T-43 | todo |
