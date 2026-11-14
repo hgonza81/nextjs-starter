@@ -72,7 +72,7 @@
 | PH-T-52 | Accept step 5 | product-manager | 5 | T-51, T-65, T-66, T-67 | done |
 | PH-T-53 | `gen:module` script | developer | 6 | T-52 | done |
 | PH-T-54 | Tests: `gen:module` | tester | 6 | T-53 | done |
-| PH-T-55 | CI smoke step for `gen:module` | developer | 6 | T-54 | todo |
+| PH-T-55 | CI smoke step for `gen:module` | developer | 6 | T-54 | done |
 | PH-T-56 | `docs/architecture.md` and ADR index confirmation | architect | 6 | T-55 | todo |
 | PH-T-57 | README: collector commands and new scripts | developer | 6 | T-55 (Independent of T-56) | todo |
 | PH-T-58 | Test README: seams, harness, ports | tester | 6 | T-55 (Independent of T-56, T-57) | todo |
