@@ -30,7 +30,8 @@
     "db:status": "supabase status",
     "obs:start": "docker compose -f docker/observability/compose.yaml up -d",
     "obs:stop": "docker compose -f docker/observability/compose.yaml down",
-    "db:schema": "node --env-file-if-exists=.env.local scripts/db-schema.mts"
+    "db:schema": "node --env-file-if-exists=.env.local scripts/db-schema.mts",
+    "gen:module": "node scripts/gen-module.mts"
   },
   "dependencies": {
     "@hookform/resolvers": "7.0.6",
