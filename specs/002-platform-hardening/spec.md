@@ -134,8 +134,9 @@ BR-01 to BR-16 in `flows.md` apply, with these corrections: BR-02 reads "the ref
 
 | ID | Requirement | Acceptance criteria | HR |
 |----|-------------|---------------------|----|
-| PH-FR-15 | **CSP.** `src/proxy.ts` sets a per-request nonce CSP on pages: `script-src` with nonce and `strict-dynamic` (no `unsafe-inline`/`unsafe-eval` in production), `style-src 'self' 'unsafe-inline'`, `default-src 'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`, `connect-src` including the Supabase origin. The policy is built by a pure, unit-tested function. The app, error pages, Tailwind, shadcn and Next scripts work under it. | PH-AC-27, 31, 32, 61, 66, 74 | 07 |
-| PH-FR-16 | **Other headers and hardening.** In `next.config.ts`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera, microphone, geolocation off), `X-Frame-Options: DENY`, HSTS (production only, no preload), `poweredByHeader: false`, `serverActions.bodySizeLimit: '1mb'`. No CORS headers are ever set; Server Actions from a foreign origin are rejected. | PH-AC-27, 28, 29, 30, 67, 73 | 07 |
+| PH-FR-15 | **CSP.** `src/proxy.ts` sets a per-request nonce CSP on pages: `script-src` with nonce and `strict-dynamic` (no `unsafe-inline`/`unsafe-eval` in production), `style-src 'self' 'unsafe-inline'`, `default-src 'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'` on every path except `/design/frames/*`, which gets `frame-ancestors 'self'` (the `/design` showcase embeds its own pages in same-origin iframes; `/design` is dev/CI only and returns 404 in production), `connect-src` including the Supabase origin. The policy is built by a pure, unit-tested function. The app, error pages, Tailwind, shadcn and Next scripts work under it. Zod's `new Function("")` probe must not raise a CSP violation: a module running `z.config({ jitless: true })` is imported first in client form files (convention for epic 003 client forms). The root layout calls `await connection()` so every page is dynamic. Documented limit: the proxy matcher excludes `api`, so `/api/*` JSON routes carry no CSP (the static headers still apply). | PH-AC-27, 31, 32, 61, 66, 74, 79 | 07 |
+<parameter name="replace_all">false PH-AC-27, 31, 32, 61, 66, 74 | 07 |
+| PH-FR-16 | **Other headers and hardening.** In `next.config.ts`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera, microphone, geolocation off), `X-Frame-Options: DENY` (`SAMEORIGIN` for `/design/frames/:path*` only, with non-overlapping `source` patterns in `headers()`), HSTS (production only, no preload), `poweredByHeader: false`, `experimental.serverActions.bodySizeLimit: '1mb'` (the key is under `experimental` in Next 16.4.6). An oversized Server Action body (over 1 MB) is rejected and the action does not run; Next answers with a non-2xx status (500) and logs `statusCode: 413`; a literal HTTP 413 is not required. No CORS headers are ever set; Server Actions from a foreign origin are rejected. | PH-AC-27, 28, 29, 30, 67, 73, 79 | 07 |
 
 ### Database conventions
 
@@ -170,7 +171,7 @@ Unless stated, "Given/When/Then" as in `flows.md` section 6 (kept verbatim for t
 - PH-AC-10 (relaxed): Given a route handler that throws, When called, Then the response has no internals (no message, stack, path) and exactly one log entry exists. No code in the body is required.
 - PH-AC-22 (measurable): Given the destination is a closed port, When 20 sequential requests are made, Then all return 200, each in under 2 seconds, and the server process is still alive. One warm-up request is made and excluded from the 20.
 - PH-AC-23: names `OTEL_EXPORTER_OTLP_ENDPOINT` (not a URL), `OTEL_EXPORTER_OTLP_PROTOCOL` (not `http/protobuf` or `http/json`), `OTEL_SERVICE_NAME` (empty); one process test spawns `next start` with a bad value and expects the variable named in the output, the value not printed, and HTTP 500 on `/api/health`. `env.server.ts` is validated from `instrumentation.ts` `register()`, so startup fails as described in PH-FR-13 (verified by PH-T-28: Next.js 16.4.6 keeps the process alive and answers 500); the test allows 30 s.
-- PH-AC-30: Given the 1 MB limit, a Server Action body just under it is accepted and one just over is rejected (413).
+- PH-AC-30 (relaxed, spike PH-T-33): Given the 1 MB limit, a Server Action body just under it is accepted; one just over is rejected, the action does not run, the HTTP response is non-2xx (Next returns 500) and the server log shows the error with `statusCode: 413`. Not a literal HTTP 413.
 - PH-AC-33: ADR 0012 states each decision with its reason and lists the rules enforced by PH-AC-35.
 - PH-AC-38: equal sort values are returned in `id` order.
 - PH-AC-39/40: defaults are page 1, size 20; size above 100, page 0, negative, non-integer, above 10,000, unknown sort or filter field return `validation` and the `tx` handle is never called.
@@ -183,7 +184,7 @@ Unless stated, "Given/When/Then" as in `flows.md` section 6 (kept verbatim for t
 - PH-AC-58: Given a failing request to a path with `?token=x` and an `Authorization` header, When the hook logs it, Then neither the query string, the header values nor the error message appear in the entry; it contains only the allowed fields (D7).
 - PH-AC-59: Given a wrapped action whose handler calls `redirect()` or `notFound()`, When called, Then the redirect or 404 still happens and no `error`-level entry is written.
 - PH-AC-60: Given a page that calls `notFound()` or an action that calls `redirect()`, When requested, Then the hook writes no entry.
-- PH-AC-61: Given the production build and the production CSP, When the 500 page, the global error page and the 404 page load in a real browser, Then there are no `securitypolicyviolation` events, styles apply and the page is usable. If `global-error` does not receive the nonce it stays script-free or uses a hash (recorded in ADR 0014).
+- PH-AC-61: Given the production build and the production CSP, When the 500 page, the global error page and the 404 page load in a real browser, Then there are no `securitypolicyviolation` events, styles apply and the page is usable. `global-error` receives the nonce (spike PH-T-33), so no script-free or hash fallback is needed.
 - PH-AC-62: Given a fixture that throws before the response starts, Then the status is 500 and the 500 page shows; given an unknown URL or a gated route, Then the status is 404. Streamed failures are not asserted.
 - PH-AC-63: Given a row hidden by RLS or absent where one is required, When mapped or fetched through the wrapper's helpers, Then the result is `not_found`, never `forbidden` (no existence leak across tenants); verified with a real database error shape in `test:db`.
 - PH-AC-64: Given a wrapped action that throws unexpectedly, Then exactly one log entry exists (from the wrapper, none from the hook); given an unwrapped one, exactly one from the hook.
@@ -195,17 +196,18 @@ Unless stated, "Given/When/Then" as in `flows.md` section 6 (kept verbatim for t
 - PH-AC-70: Given a request with `x-request-id`, Then log entries in it carry that value; given none, Then `request_id` is absent (never generated).
 - PH-AC-71: Given an `unexpected` result, Then `ref` matches `^[A-Za-z0-9_-]+$` and differs between two occurrences.
 - PH-AC-72: Given the logger sink throws, When a request fails, Then the user still receives the error page or result.
-- PH-AC-73: Given the production build, Then `serverActions.bodySizeLimit` is `1mb` (config test) and documented.
+- PH-AC-73: Given the production build, Then `experimental.serverActions.bodySizeLimit` is `1mb` (config test reads `nextConfig.experimental.serverActions.bodySizeLimit`) and documented.
 - PH-AC-74: Given a Supabase URL in `publicEnv`, When the policy is built, Then `connect-src` contains its origin (unit test); production policy has no `unsafe-eval`.
 - PH-AC-75: Given page 10,001 or `1e3` or `1.5`, Then `validation` is returned, not a database error.
 - PH-AC-76: Given `DESIGN_PAGE_ENABLED` is off (default), Then every `/design/errors/*` route returns 404 (unit test of the gate plus E2E on the flag-off server).
 - PH-AC-77: Given `/design`, Then `StatusPage` appears with axe clean in light and dark.
 - PH-AC-78 (test mechanism, no new behavior): the E2E base fixture installs a `securitypolicyviolation` and console-CSP-error listener before navigation (`addInitScript`) and fails any test that records one, except the two tests that provoke violations (PH-AC-32).
+- PH-AC-79 (new, spike PH-T-33): Given the production build, Then `/design/frames/*` responses carry `frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN` and can be framed by the same origin only, while every other route carries `frame-ancestors 'none'` and `X-Frame-Options: DENY` and cannot be framed (policy builder unit test for both variants; E2E headers check plus a same-origin frame loading and a framing attempt on another route being blocked). Also: a client form page that builds a Zod schema (the `/design` live form) records no `securitypolicyviolation` (covered by PH-AC-78 on `/design`).
 
 **Test level per criterion (one named level each)**
-- Unit: 11, 12, 13 (fake errors), 16, 17, 18, 23 (schema), 27-30 (policy and config parts), 39, 40, 44-47, 49-53, 59, 60 (hook call), 64 (fakes), 70 (logger with injected header source), 71, 72 (injected throwing sink; unit only), 73, 74, 75, 76 (gate).
+- Unit: 11, 12, 13 (fake errors), 16, 17, 18, 23 (schema), 27-30 (policy and config parts), 39, 40, 44-47, 49-53, 59, 60 (hook call), 64 (fakes), 70 (logger with injected header source), 71, 72 (injected throwing sink; unit only), 73, 74, 75, 76 (gate), 79 (policy and config variants).
 - `test:db`: 14, 15, 34, 35, 37, 38, 41, 42, 43, 63, 68, 69.
-- E2E on the production build: 01-06, 08, 09, 10, 20-22, 27-29, 31, 32, 58, 60 (`notFound()` page), 61, 62, 64 (E2E half), 65, 66, 67, 70, 76 (flag-off server), 77, 78 (fixture).
+- E2E on the production build: 01-06, 08, 09, 10, 20-22, 27-29, 31, 32, 58, 60 (`notFound()` page), 61, 62, 64 (E2E half), 65, 66, 67, 70, 76 (flag-off server), 77, 78 (fixture), 79 (headers and framing).
 - Process test: 23 (bad variable). Lint test: 19.
 - CI gates: 25, 36, 54. Manual checklist: 24, 26, 55, 57. Review: 33, 56.
 - PH-AC-30 and 67 drive the oversized and foreign-origin posts through a fixture form in a real page, so the Server Action id is real.
@@ -251,7 +253,7 @@ Walking skeleton first so value appears early; the first task of each area is a 
 |------|------|-------------|
 | 1 | Logger, typed errors and DB mapping, `StatusPage`, 500/global/404 pages, `onRequestError`, `defineAction`, fault routes, `no-console`; includes the E2E log harness and extra-server wiring (D14) | Drizzle error `cause` shape against the real database; a `"use server"` file exporting `defineAction(...)` results builds; `onRequestError` not firing for `redirect()`/`notFound()`; a page that throws before streaming returns 500 under `connection()`; `error.digest` is present in the production build |
 | 2 | OpenTelemetry (SDK, env validation, logger bridge), local collector, tests with receiver | `sdk-node` under Turbopack and Node 26, package versions |
-| 3 | `src/proxy.ts` CSP, static headers, hardening | Nonce reaches Next scripts; `global-error` receives the nonce; proxy runs on Node; an oversized Server Action returns 413 |
+| 3 | `src/proxy.ts` CSP, static headers, hardening | Nonce reaches Next scripts; `global-error` receives the nonce; proxy runs on Node; an oversized Server Action is rejected (done, PH-T-33: all confirmed; the response is 500 with 413 in the log) |
 | 4 | Database conventions, trigger, guard | Trigger clock and `set_updated_at` under the existing default-privilege revoke |
 | 5 | Pagination (`listParams`, `paginate`) | None beyond step 1's findings |
 | 6 | `gen:module`, docs, ADR index, README, acceptance | None |
@@ -262,12 +264,14 @@ Workflow: each task is run by a fresh agent instance (AGENTS.md); one local comm
 
 | Risk or assumption | Mitigation |
 |--------------------|------------|
-| Nonce CSP breaks Next, Tailwind, shadcn or `global-error`; forces per-request rendering for every page | E2E under CSP is the proof (PH-AC-31, 61); fallback static CSP in `next.config.ts` recorded in ADR 0014 |
+| Nonce CSP breaks Next, Tailwind, shadcn or `global-error`; forces per-request rendering for every page | E2E under CSP is the proof (PH-AC-31, 61). Spike PH-T-33 confirmed the nonce reaches Next scripts and `global-error`; the static CSP in `next.config.ts` stays documented in ADR 0014 as an option but is not needed |
+| `/api/*` JSON routes carry no CSP (proxy matcher excludes `api`) | Documented limit: not needed for non-HTML; static headers still apply |
+| `/design/frames/*` is framable by the same origin (exception to `frame-ancestors 'none'`) | Scoped to that path only, non-overlapping patterns; `/design` returns 404 in production (PH-AC-79) |
 | `sdk-node` and the OTel logs packages (0.x) are unstable under Turbopack and Node 26 | Spike first; SDK is off when unconfigured, so failure cannot break the app; exact pins |
 | Drizzle wraps driver errors, so mapping may miss the SQLSTATE | Spike plus `test:db` with real errors, walking `cause` |
 | Digest missing in some paths | Documented limit; wrapper generates its own code |
 | Epic is large for "hardening" (12 requirements) | Delivery order above; each area independently shippable |
-| Assumes C1 to C4 are confirmed | Listed at the top; changing C1 adds guard rules and columns later, additively; C3 and C4 have recorded fallbacks |
+| Assumes C1 to C4 are confirmed | Listed at the top; changing C1 adds guard rules and columns later, additively; C3 and C4 have recorded fallbacks (the C3 fallback is documented but not needed after the spike) |
 | Test fault routes ship in the artifact behind a gate | Gate is off by default and tested (PH-AC-76) |
 
 ## 14. Open decisions
@@ -292,7 +296,7 @@ None blocking beyond C1 to C4 at the top. Revertible defaults are D1-D17 (sectio
 | PH-HR-04 | PH-FR-09, 10 | PH-AC-16 to 19, 70, 72 (unit, lint test) |
 | PH-HR-05 | PH-FR-11, 12, 13 | PH-AC-20 to 23, 65 (unit, E2E with receiver, process test) |
 | PH-HR-06 | PH-FR-14 | PH-AC-24 to 26 (manual checklist; CI proves non-dependence) |
-| PH-HR-07 | PH-FR-15, 16 | PH-AC-27 to 32, 66, 67, 73, 74 (E2E prod, unit, config test) |
+| PH-HR-07 | PH-FR-15, 16 | PH-AC-27 to 32, 66, 67, 73, 74, 79 (E2E prod, unit, config test) |
 | PH-HR-08 | PH-FR-17, 18, 19 | PH-AC-33 to 36, 68, 69 (`test:db`, review, CI drift check) |
 | PH-HR-09 | PH-FR-20, 21 | PH-AC-37 to 43, 75 (`test:db`, unit) |
 | PH-HR-10 | PH-FR-08 | PH-AC-44 to 47, 59, 64, 71 (unit with fakes, E2E) |
@@ -310,3 +314,4 @@ None blocking beyond C1 to C4 at the top. Revertible defaults are D1-D17 (sectio
 | 2026-11-13 | Traceability check applied: C3 (nonce CSP renders every page per request; fallback static CSP, ADR 0014) and C4 (fault routes and `assertFaultInjection()` ship behind `DESIGN_PAGE_ENABLED`; fallback in PH-FR-23) added to the Product Owner confirmation block. No requirement or criterion changed. `tasks.md` split and renumbered (62 tasks). Status unchanged: Draft. |
 | 2026-11-13 | Approved by the Product Owner: C1 (hard delete, `created_at`/`updated_at` only), C2, C3 and C4 confirmed with the recommended options. |
 | 2026-11-13 | PH-AC-23 / PH-FR-13 relaxed: Next.js 16.4.6 does not exit when `register()` throws (found by PH-T-28); "fails startup" now means the variable is named, the value is not printed and every request returns 500. Forcing `process.exit(1)` was rejected as fragile on serverless platforms. Same behavior as the epic 001 variables. |
+| 2026-11-13 | Spike PH-T-33 decisions applied (technical decisions delegated to the orchestrator; status stays Approved). PH-AC-30 / PH-FR-16: oversized Server Action is rejected, non-2xx (500), 413 in the log, not a literal 413; the limit is `experimental.serverActions.bodySizeLimit` (PH-AC-73 updated). PH-FR-15 / PH-FR-16: `/design/frames/*` gets `frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN`, everything else stays `'none'` / `DENY`; new criterion PH-AC-79. PH-FR-15: Zod `jitless` module for client forms, root layout `connection()`, `/api/*` carries no CSP (documented limit). PH-AC-61: `global-error` receives the nonce, no script-free/hash fallback; C3 static-CSP fallback documented but not needed (risk rows updated). |

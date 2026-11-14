@@ -50,7 +50,7 @@
 | PH-T-30 | Manual check of the collector | tester | 2 | T-26, T-27 | done |
 | PH-T-31 | Architect check of step 2 and ADR 0013 confirmation | architect | 2 | T-28, T-29, T-30 | done |
 | PH-T-32 | Accept step 2 | product-manager | 2 | T-31 | done |
-| PH-T-33 | Spike: nonce reaches Next scripts, `global-error` nonce, proxy on Node, 413 | developer | 3 | T-32 | todo |
+| PH-T-33 | Spike: nonce reaches Next scripts, `global-error` nonce, proxy on Node, 413 | developer | 3 | T-32 | done |
 | PH-T-34 | CSP builder and `src/proxy.ts` | developer | 3 | T-33 | todo |
 | PH-T-35 | Static headers and config hardening | developer | 3 | T-33 (Independent of T-34) | todo |
 | PH-T-36 | Tests: CSP policy and config (unit) | tester | 3 | T-34, T-35 | todo |
@@ -486,9 +486,9 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Assignee:** developer
 - **Goal:** per-request nonce CSP.
 - **Requirements:** PH-FR-15.
-- **Read first:** spec 7 (PH-FR-15), 5 (D10), PH-AC-27, 31, 32, 61, 66, 74; ADR 0014 (incl. spike outcome); `src/lib/env.ts`.
-- **Do:** a pure function building the policy (nonce, `strict-dynamic`, no `unsafe-inline`/`unsafe-eval` in production, `style-src 'self' 'unsafe-inline'`, `default-src 'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`, `connect-src` with the Supabase origin from `publicEnv`; no `upgrade-insecure-requests`); `src/proxy.ts` generating a nonce per request and setting the header on pages; apply the `global-error` decision from the spike. The app, error pages, Tailwind, shadcn and Next scripts work under it.
-- **Acceptance:** on `build` + `start`, `/`, `/design` and the three status pages load without violations (manual check; automated in T-37); gates pass.
+- **Read first:** spec 7 (PH-FR-15), 5 (D10), PH-AC-27, 31, 32, 61, 66, 74, 79; ADR 0014 (incl. spike outcome, findings B to D); `src/lib/env.ts`; `src/app/design/live-form.tsx`.
+- **Do:** a pure function building the policy (nonce, `strict-dynamic`, no `unsafe-inline`/`unsafe-eval` in production, `style-src 'self' 'unsafe-inline'`, `default-src 'self'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'` by default and `frame-ancestors 'self'` for paths under `/design/frames/` (the function takes the path or a flag), `connect-src` with the Supabase origin from `publicEnv`; no `upgrade-insecure-requests`); `src/proxy.ts` generating a nonce per request and setting the header on pages, using the matcher from the Next guide (it excludes `api`, so `/api/*` carries no CSP: documented limit); add `await connection()` to the root layout (nothing is dynamic otherwise with the fault flag off); add a module running `z.config({ jitless: true })` and import it first in client form files (at least `src/app/design/live-form.tsx`), so Zod's `new Function("")` probe raises no CSP violation. `global-error` receives the nonce (spike), so no script-free or hash fallback is needed. The app, error pages, Tailwind, shadcn and Next scripts work under it.
+- **Acceptance:** on `build` + `start`, `/`, `/design` (including its iframes under `/design/frames/*`) and the three status pages load without violations (manual check; automated in T-37); gates pass.
 - **Out of scope:** static headers (T-35), tests (T-36, T-37).
 - **Output:** policy builder, `src/proxy.ts`. Commit scope `feat(security)`.
 - **Dependencies:** PH-T-33.
@@ -497,9 +497,9 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Assignee:** developer
 - **Goal:** the non-CSP headers and framework hardening.
 - **Requirements:** PH-FR-16.
-- **Read first:** spec 7 (PH-FR-16), PH-AC-27 to 30, 67, 73; ADR 0014; `next.config.ts`.
-- **Do:** in `next.config.ts`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera, microphone, geolocation off), `X-Frame-Options: DENY`, HSTS in production only without preload, `poweredByHeader: false`, `serverActions.bodySizeLimit: '1mb'`. No CORS headers. Document the 1 MB limit in a comment pointing to ADR 0014.
-- **Acceptance:** `pnpm build` passes; headers visible on a `start` server; no CORS header present.
+- **Read first:** spec 7 (PH-FR-16), PH-AC-27 to 30, 67, 73, 79; ADR 0014 (incl. spike findings A, B, D); `next.config.ts`.
+- **Do:** in `next.config.ts`: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera, microphone, geolocation off), `X-Frame-Options: DENY` for every path except `/design/frames/:path*` and `X-Frame-Options: SAMEORIGIN` for `/design/frames/:path*` (non-overlapping `source` patterns in `headers()`), HSTS in production only without preload, `poweredByHeader: false`, `experimental: { serverActions: { bodySizeLimit: '1mb' } }` (the key is under `experimental` in Next 16.4.6). No CORS headers. Document the 1 MB limit and the `/design/frames/*` exception in comments pointing to ADR 0014.
+- **Acceptance:** `pnpm build` passes; headers visible on a `start` server (`SAMEORIGIN` on a `/design/frames/*` path, `DENY` elsewhere); no CORS header present.
 - **Out of scope:** tests (T-36 to T-38).
 - **Output:** `next.config.ts`. Commit scope `feat(security)`.
 - **Dependencies:** PH-T-33.
@@ -508,8 +508,8 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Assignee:** tester
 - **Goal:** unit tests for the policy and the config.
 - **Requirements:** PH-FR-15, 16.
-- **Read first:** spec 8 (PH-AC-27 to 30 policy/config parts, 73, 74); the policy builder, `next.config.ts`.
-- **Do:** policy contains every directive in PH-FR-15, no `unsafe-eval` and no script `unsafe-inline` in production, nonce embedded, `connect-src` contains the Supabase origin from a given `publicEnv` (74); config test: static headers, HSTS production only, no preload, `poweredByHeader` false, `serverActions.bodySizeLimit` is `1mb` and documented (73), no CORS header.
+- **Read first:** spec 8 (PH-AC-27 to 30 policy/config parts, 73, 74, 79); the policy builder, `next.config.ts`.
+- **Do:** policy contains every directive in PH-FR-15, no `unsafe-eval` and no script `unsafe-inline` in production, nonce embedded, `connect-src` contains the Supabase origin from a given `publicEnv` (74), `frame-ancestors 'none'` by default and `'self'` for `/design/frames/*` (79); config test: static headers, `X-Frame-Options` `DENY` generally and `SAMEORIGIN` only for `/design/frames/:path*` with non-overlapping sources (79), HSTS production only, no preload, `poweredByHeader` false, `experimental.serverActions.bodySizeLimit` is `1mb` and documented (73; read `nextConfig.experimental.serverActions.bodySizeLimit`), no CORS header.
 - **Acceptance:** gates pass.
 - **Out of scope:** E2E (T-37, T-38).
 - **Output:** test files. Commit scope `test(security)`.
@@ -519,8 +519,8 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Assignee:** tester
 - **Goal:** prove the headers and CSP in a real browser on the production build.
 - **Requirements:** PH-FR-15, 16, 02.
-- **Read first:** spec 8 (PH-AC-27 to 29, 31, 32, 61, 66, 78); the base fixture from T-13.
-- **Do:** make the PH-AC-78 fixture active for all E2E specs (all existing specs become CSP regression tests; only the two tests provoking violations are excepted); tests: response headers on a page (27, 28, 29); two requests carry different nonces and scripts carry them (66); `/`, `/design` and the three status pages including the global error page via `x-fault` load with no violations and usable styles (31, 61); a provoked violation is detected (32).
+- **Read first:** spec 8 (PH-AC-27 to 29, 31, 32, 61, 66, 78, 79); the base fixture from T-13.
+- **Do:** make the PH-AC-78 fixture active for all E2E specs (all existing specs become CSP regression tests; only the two tests provoking violations are excepted); tests: response headers on a page (27, 28, 29); two requests carry different nonces and scripts carry them (66); `/`, `/design` (live form included: no Zod `eval` violation) and the three status pages including the global error page via `x-fault` load with no violations and usable styles (31, 61); a provoked violation is detected (32); `/design/frames/*` carries `frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN` and loads in a same-origin iframe, while another route carries `'none'` / `DENY` and is not framable (79).
 - **Acceptance:** `pnpm test:e2e` passes, stable across 3 runs.
 - **Out of scope:** Server Action origin and size (T-38); cross-browser, ZAP, Lighthouse (parked).
 - **Output:** spec files, fixture. Commit scope `test(e2e)`.
@@ -531,7 +531,7 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Goal:** prove the Server Action body limit and origin check on the production build.
 - **Requirements:** PH-FR-16.
 - **Read first:** spec 8 (PH-AC-30, 67 and the 30/67 note); fault fixture form from T-07; the base fixture from T-13.
-- **Do:** oversized fixture-form post is rejected with 413 and one just under 1 MB is accepted (30); foreign `Origin` post is rejected (67).
+- **Do:** a fixture-form post just under 1 MB is accepted; one over 1 MB is rejected, the action does not run, the response is non-2xx (Next returns 500) and the tee'd server log shows the error with `statusCode: 413`, asserted with `expect.poll` (30; not a literal HTTP 413); foreign `Origin` post is rejected (67).
 - **Acceptance:** `pnpm test:e2e` passes, stable across 3 runs.
 - **Out of scope:** header and CSP assertions (T-37).
 - **Output:** spec files. Commit scope `test(e2e)`.
@@ -542,7 +542,7 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Goal:** code matches ADR 0014; fallback recorded.
 - **Requirements:** PH-FR-15, 16; PH-NFR-06.
 - **Read first:** ADR 0014, step 3 code and tests.
-- **Do:** review; record the per-request-rendering consequence, the `global-error` outcome and the static CSP fallback; amend ADR text; report findings.
+- **Do:** review; record the per-request-rendering consequence, the `global-error` outcome (receives the nonce; no script-free/hash fallback), the static CSP option (documented, not needed), the `/design/frames/*` exception, the `/api/*` no-CSP limit and the Zod `jitless` convention; amend ADR text; report findings.
 - **Acceptance:** ADR 0014 consistent with code; no unresolved must-fix.
 - **Out of scope:** code changes.
 - **Output:** edited ADR 0014. Commit scope `docs(adr)`.
@@ -741,7 +741,7 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Goal:** architecture docs match the built epic.
 - **Requirements:** PH-FR-24; PH-AC-33, 56.
 - **Read first:** spec 7 (PH-FR-24), 5 (D13, D16); `docs/architecture.md`, `docs/adr/README.md`, ADRs 0012 to 0016.
-- **Do:** verify `docs/architecture.md` has C1, C6, C8, C11, C13 to C15, layout and the ADR table consistent with the code (including `gen:module`, fault routes, `src/proxy.ts`, `src/lib/*`); verify ADRs 0012-0016 are listed in `docs/adr/README.md` and their status is correct; fix text only.
+- **Do:** verify `docs/architecture.md` has C1, C6, C8, C11, C13 to C15, layout and the ADR table consistent with the code (including `gen:module`, fault routes, `src/proxy.ts`, `src/lib/*`); verify ADRs 0012-0016 are listed in `docs/adr/README.md` and their status is correct; fix text only. Also verify `docs/architecture.md` records the convention that client forms (epic 003 included) import the `z.config({ jitless: true })` module (from PH-T-34) first, and the `/design/frames/*` framing exception and the `/api/*` no-CSP limit; add them if missing (text only).
 - **Acceptance:** no doc statement contradicts the code or spec; ADR list complete.
 - **Out of scope:** code changes, new ADRs unless a hard-to-reverse decision was found missing (then report).
 - **Output:** edited docs. Commit scope `docs(architecture)`.
@@ -833,8 +833,8 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 | PH-FR-12 | T-23, T-25, T-26 | T-29, T-32 |
 | PH-FR-13 | T-24 | T-28, T-32 |
 | PH-FR-14 | T-27, T-57 | T-30, T-59 (CI non-dependence), T-32 |
-| PH-FR-15 | T-33, T-34 | T-36, T-37, T-40 |
-| PH-FR-16 | T-35 | T-36, T-37, T-38, T-40 |
+| PH-FR-15 | T-33, T-34, T-56 (jitless convention in docs) | T-36, T-37, T-40 (incl. PH-AC-79) |
+| PH-FR-16 | T-35 | T-36, T-37, T-38, T-40 (incl. PH-AC-79) |
 | PH-FR-17 | T-41, T-42 | T-45 (ADR review), T-46 |
 | PH-FR-18 | T-41, T-42 | T-44, T-46 |
 | PH-FR-19 | T-43 | T-44, T-59, T-46 |
@@ -869,3 +869,4 @@ Every PH-FR and PH-NFR appears at least once as a build task and once as a verif
 | 2026-11-13 | Traceability findings F1-F8 applied: PH-AC-76 unit test added to T-18 and listed in T-59; T-06 added to dependencies of the page and hook tasks (via the fixtures task); `flows.md` sections 4-6 added to the common read-first; trace id test and dev-only in-memory exporter added to T-14; wrong PH-AC-11 citation removed from the errors test task; old T-06 split into T-06 (seam and gate) and T-07 (fixtures), old T-18 split into T-19 (capture) and T-20 (leakage, wrapper, request id), old T-35 split into T-37 (CSP, headers, nonce) and T-38 (Server Action origin and size); collector task made sequential after the SDK bootstrap task; critical-path wording fixed. All task IDs after T-06 renumbered (59 tasks became 62); status table, dependencies, matrix, critical path and cross-references updated. Statuses unchanged: Draft / todo. |
 | 2026-11-13 | Added fix task PH-T-63 (route-handler failures lacked `request_id`, found by PH-T-20); PH-T-21 now depends on it. Total 63 tasks. |
 | 2026-11-13 | Added PH-T-64 (relaxed PH-AC-23: Next.js 16 does not exit on an invalid OTEL_* value). Total 64 tasks. |
+| 2026-11-13 | Spike PH-T-33 decisions applied (status table: PH-T-33 done; other statuses unchanged; no tasks added). T-34: `/design/frames/*` `frame-ancestors 'self'` variant, root layout `connection()`, `z.config({ jitless: true })` module imported first in client form files, `global-error` needs no fallback, `/api/*` no-CSP limit. T-35: `experimental.serverActions.bodySizeLimit`, `X-Frame-Options` `SAMEORIGIN` for `/design/frames/:path*` and `DENY` elsewhere. T-36/T-37: new PH-AC-79 and `experimental` config key. T-38: PH-AC-30 relaxed (non-2xx, 413 in the log). T-39 and T-56: record outcomes and the jitless convention in `docs/architecture.md`. Traceability rows updated. |
