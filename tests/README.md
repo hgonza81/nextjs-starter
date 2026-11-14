@@ -16,7 +16,8 @@ protects (for example `FND-FR-22: ...`).
 - `pnpm test:db` is Vitest, project `db`, real local Supabase as the `app_backend`
   role. Files run one after another (`fileParallelism: false`).
 - `pnpm test:e2e` is Playwright (Chromium) against a production build. It builds
-  once and starts two servers (see "E2E (FND-T-17)" and "E2E: design system").
+  once and starts four servers (see "E2E (FND-T-17)", "E2E: design system" and
+  "E2E: platform hardening harness").
 - Any extra argument is passed to the runner: `pnpm test src/lib`,
   `pnpm test:db tests/db/harness.test.ts`, `pnpm test:e2e tests/e2e/health.spec.ts`.
 - Coverage is report only, with no threshold (FND-FR-19): `pnpm test:coverage`
@@ -450,6 +451,146 @@ returned `/design/frames/missing` for the `loading` frame.
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | One frame slug points to a 404 route            | Both `all 18 frames loaded` tests red, naming the 6 `/design/frames/missing?theme=...` frames that did not load |
 | Same mutation with the first version of the fix | Survived (a 404 page has a body and its own path); this is why the title landmark was added                     |
+
+## E2E: platform hardening harness (epic 002, PH-FR-23, PH-FR-24)
+
+Everything in this section is for `pnpm test:e2e` (no Docker, no database).
+
+### Run one file and read its server log
+
+```bash
+pnpm exec playwright install chromium            # once per machine
+pnpm test:e2e tests/e2e/error-pages.spec.ts      # builds, starts the servers, runs one file
+cat tests/.logs/server-3100.log                  # the main server's log of that run
+```
+
+Playwright runs `pnpm build` and then starts every server with
+`node scripts/e2e-server.mts <port>` (a production build and `next start`, never
+the dev server). Do not run two E2E runs at the same time: they share the
+ports below (and `.next/`, `tests/.logs/`), and a server already on a port is
+never reused, so the second run fails or tests the wrong build. Stop a stray
+`next start` before running again.
+
+### Server wrapper and log tee
+
+`scripts/e2e-server.mts <port>` spawns `next start --port <port>` through Node,
+copies the child's stdout and stderr to the console (Playwright and the CI log
+still show them) and to `tests/.logs/server-<port>.log`. The file is truncated
+when the server starts (a log never mixes two runs), the folder is git-ignored,
+and the wrapper exits with the child's exit code. The log holds Next's own lines
+and the app logger's JSON lines.
+
+Read it from a spec with `tests/e2e/helpers/server-log.ts` (every function
+re-reads the file, so use it inside `expect.poll`; the port defaults to the main
+server):
+
+- `findLogEntries({ digest })`: parsed JSON entries whose fields equal every given value.
+- `readLogEntries(port?)`, `readLogLines(port?)`: all entries or all raw lines.
+- `findLogLinesContaining(text, port?)`: raw lines, to prove a token never reached the log.
+- `MAIN_PORT`, `FLAG_OFF_PORT`, `BASE_PORT`: the port constants.
+
+```ts
+await expect
+  .poll(async () => (await findLogEntries({ digest })).length)
+  .toBe(1);
+```
+
+Rule: servers are shared by parallel tests and the log is cumulative, so a test
+finds its entries by a value unique to it (the error digest, the per-test
+`token` query parameter, a `request_id` it sent in `x-request-id`), never by
+counting entries in the whole log and never by "the last line".
+
+### Port layout
+
+All ports derive from `E2E_PORT` (default 3100; `tests/e2e/helpers/server-log.ts`
+and `telemetry.ts` use the same offsets as `playwright.config.ts`):
+
+| Offset | Port (default) | What                                                                                                  |
+| ------ | -------------- | ----------------------------------------------------------------------------------------------------- |
+| +0     | 3100           | main server, `DESIGN_PAGE_ENABLED=true` (project `chromium`)                                          |
+| +1     | 3101           | same build, flag unset (project `design-gate-off`, the Vercel production state)                       |
+| +2     | 3102           | telemetry on: exports to the OTLP receiver (`e2e-telemetry-on`)                                       |
+| +3     | 3103           | telemetry to a closed port (`e2e-telemetry-closed`)                                                   |
+| +5     | 3105           | spare port: `telemetry-config-startup.spec.ts` spawns its own `next start` there (bad variable)       |
+| +10    | 3110           | OTLP receiver (plain Node `http`, `http/json`), started by `tests/e2e/global-setup.ts` before servers |
+| +11    | 3111           | nothing listens: the closed-port destination of the +3 server                                         |
+
+The four servers start from one build (the first command builds; the others
+reuse it). Database variables and any `OTEL_*` variable of your shell are
+removed from every server; only the telemetry servers get `OTEL_*` values
+(batch delays of 100 ms so exports happen inside the test window). The
+telemetry servers also set `DESIGN_PAGE_ENABLED=true`. The Docker collector is
+never used by any test or CI job: the receiver replaces it.
+
+### Fault-injection seams (PH-FR-23, spec decision C4)
+
+Both seams ship in the production build and are inert unless
+`DESIGN_PAGE_ENABLED` is on (the flag-off server proves it, PH-AC-76; the unit
+test is `src/lib/fault-injection.test.ts`). They never touch the database.
+
+- Fixtures under `/design/errors/*` (`src/app/design/errors/`): `page-throw`
+  (page whose render throws, message carries `?token=`), `route-throw` (route
+  handler that throws), `retry` (fails the first request per token, then
+  renders), `not-found-page` (`notFound()`, an expected 404), `form` (a real
+  page posting to real Server Actions: throwing, wrapped, redirect and
+  oversized-body). With the flag off they all answer 404.
+- Root layout failure: `src/app/layout.tsx` calls `assertFaultInjection()`
+  (`src/lib/fault-injection.ts`), which throws only when the flag is on and the
+  request carries the header `x-fault: root-layout`. This is the only way to
+  reach `global-error`. Tests add the header for one navigation, for example
+  `page.route` with `route.continue({ headers: { ...route.request().headers(), "x-fault": "root-layout" } })`
+  for the one document path, removed after `page.goto` (helper
+  `navigateWithRootLayoutFault` in `error-pages.spec.ts`).
+
+Give every fault request a unique token (`randomUUID()` in the query string):
+the error digest then differs per test and per attempt, which makes log lookups
+exact. Exception: the digest of the body-limit error is the same for every
+oversized post (it hashes the message), so only ONE test in the whole suite may
+send an oversized body (`server-action-limits.spec.ts`). Do not add a second.
+
+### CSP-violation base fixture
+
+Every spec imports `test`/`expect` from `tests/e2e/helpers/fixtures.ts` (not
+from `@playwright/test`; `telemetry-config-startup.spec.ts` is the exception,
+it uses no page). The fixture is automatic: it records `securitypolicyviolation`
+events and Chromium's console errors about the Content Security Policy, and
+fails the test if any was seen (PH-AC-78). A test that provokes violations on
+purpose opts out and may read what was seen:
+
+```ts
+test.use({ allowCspViolations: true }); // file or describe level
+test("...", async ({ page, cspViolations }) => {
+  /* ... */
+});
+```
+
+Use it only for tests that attack the policy or the framing rules (the negative
+tests in `security-headers-csp.spec.ts`).
+
+### Where the other tests of the epic live
+
+| Level                       | Location                                                           | Runs in         |
+| --------------------------- | ------------------------------------------------------------------ | --------------- |
+| Unit                        | `src/**/*.test.ts(x)`                                              | `pnpm test`     |
+| Lint rule tests             | `tests/lint/` (`no-console`, boundaries, with `fixtures/`)         | `pnpm test`     |
+| Script tests                | `tests/scripts/` (`gen:module`)                                    | `pnpm test`     |
+| DB                          | `tests/db/`                                                        | `pnpm test:db`  |
+| E2E on a production build   | `tests/e2e/`                                                       | `pnpm test:e2e` |
+| Process test (bad variable) | `tests/e2e/telemetry-config-startup.spec.ts` (own server, port +5) | `pnpm test:e2e` |
+
+Level per PH-AC (spec section 8, "Test level per criterion"):
+
+- Unit: 11, 12, 13, 16, 17, 18, 23 (schema), 27-30 (policy and config parts), 39, 40, 44-47, 49-53, 59, 60 (hook call), 64, 70, 71, 72, 73, 74, 75, 76 (gate), 79 (policy and config).
+- `test:db`: 14, 15, 34, 35, 37, 38, 41, 42, 43, 63, 68, 69.
+- E2E on the production build: 01-06, 08, 09, 10, 20-22, 27-29, 31, 32, 58, 60 (`notFound()` page), 61, 62, 64 (E2E half), 65, 66, 67, 70, 76 (flag-off server), 77, 78 (fixture), 79 (headers and framing).
+- Process test: 23 (bad variable). Lint test: 19.
+- CI gates: 25, 36, 54. Review: 33, 56.
+- Manual checks (not automated, listed in the epic acceptance checklist): PH-AC-24
+  and 26 (start and stop of the Docker collector), 55 (each PH-HR is covered
+  or listed), 57 (the product-manager compares the final diff with the
+  out-of-scope list).
+
+If the spec and this list ever differ, the spec wins; update this section.
 
 ## Lint boundary tests (`tests/lint`, FND-FR-12, FND-FR-20)
 

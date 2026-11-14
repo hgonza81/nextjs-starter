@@ -113,6 +113,9 @@ E2E needs the three `NEXT_PUBLIC_*` variables (`NEXT_PUBLIC_SUPABASE_URL`,
 `pnpm test:e2e` works. If you build or start the app yourself, export them
 first (the values in `.env.example` are fine). E2E uses port 3100, so it does
 not collide with `pnpm dev`.
+E2E runs on a production build (`pnpm build` then `next start`), never on the
+dev server; the server wrapper, ports and fault seams are in
+[tests/README.md](tests/README.md).
 
 ## Creating a module
 
