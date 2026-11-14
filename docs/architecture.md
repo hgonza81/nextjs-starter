@@ -94,7 +94,7 @@ Numbers C1 to C15 are stable: lint messages cite them (`eslint.config.mjs`). The
 | C12 | Commits | Conventional Commits, documented, not enforced. |
 | C13 | Database conventions | uuid ids, snake_case, plural tables, `<singular>_id` foreign keys, explicit `ON DELETE`, `created_at`/`updated_at timestamptz` with `set_updated_at()` trigger, hard delete, no audit columns (ADR 0012). Enforced by `tests/db/schema-guard.test.ts` (limits and expected epic 003 exceptions in ADR 0012). |
 | C14 | Security headers and CSP | Nonce CSP from `src/proxy.ts`, all pages dynamic; other headers static in `next.config.ts`; no CORS headers (ADR 0014). |
-| C15 | Lists | Parse query params with `listParams` and query with `paginate(tx, ...)` from `@/db` (ADR 0016). |
+| C15 | Lists | Parse query params with `listParams` (outside `defineAction`: `parseListParams`) and query with `paginate(tx, ...)` from `@/db` (ADR 0016). URL shape `?page=&pageSize=&sort=&dir=&<filterField>=`: `page`, `pageSize`, `sort`, `dir` are reserved (filters may not use them), each key at most once, equality filters only, page 1 to 10,000, size 1 to 100 (default 20). `columns` passed to `paginate` must include `id` (tiebreaker). `pageCount` is 0 when nothing matches. Totals are READ COMMITTED-approximate. A client file calling `listParams` imports `@/lib/zod-jitless` first. |
 
 ## Lint rules
 Every FND-FR-12 rule is an ESLint check that runs in `pnpm lint` and in CI (`fast` job). FND-T-37 implemented them in `eslint.config.mjs` (commit `5369669`); FND-T-38 proves each with an illegal and a legal fixture, and FND-T-61 extended rule (d) and the (b) test to relative `../db/client` and `../db/rls` imports from `src/lib`. Sources: spec FND-FR-12, ADR 0001 (rules 1 to 5 and amendment), ADR 0003.

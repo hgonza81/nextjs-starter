@@ -68,8 +68,8 @@
 | PH-T-48 | `paginate` | developer | 5 | T-47 | done |
 | PH-T-49 | Tests: `listParams` | tester | 5 | T-47 (Independent of T-48) | done |
 | PH-T-50 | Tests: `paginate` | tester | 5 | T-48 | done |
-| PH-T-51 | Architect check of step 5 and ADR 0016 confirmation | architect | 5 | T-49, T-50 | todo |
-| PH-T-52 | Accept step 5 | product-manager | 5 | T-51 | todo |
+| PH-T-51 | Architect check of step 5 and ADR 0016 confirmation | architect | 5 | T-49, T-50 | done |
+| PH-T-52 | Accept step 5 | product-manager | 5 | T-51, T-65, T-66, T-67 | todo |
 | PH-T-53 | `gen:module` script | developer | 6 | T-52 | todo |
 | PH-T-54 | Tests: `gen:module` | tester | 6 | T-53 | todo |
 | PH-T-55 | CI smoke step for `gen:module` | developer | 6 | T-54 | todo |
@@ -82,6 +82,9 @@
 | PH-T-62 | Final acceptance | product-manager | 6 | T-60, T-61 | todo |
 | PH-T-63 | Fix: `request_id` missing on route-handler failures logged by the hook | developer | 1 | T-20 | done |
 | PH-T-64 | Adjust the bad-variable startup test to the relaxed PH-AC-23 | tester | 2 | T-28 | done |
+| PH-T-65 | Fix: one shared `fieldErrorsFromZod` helper (architect F1) | developer | 5 | T-51 | todo |
+| PH-T-66 | Typed filter values in `listParams` (architect F3, Q1 option b) | developer | 5 | T-65 | todo |
+| PH-T-67 | Tests: typed filters and test rename (architect F2, F3) | tester | 5 | T-66 | todo |
 
 Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-ux-designer 1. Total 62.
 
@@ -422,6 +425,39 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Out of scope:** changing `register()`; other tests.
 - **Output:** the updated spec file. Commit scope `test(e2e)`.
 - **Dependencies:** PH-T-28.
+
+### PH-T-65 Fix: one shared `fieldErrorsFromZod` helper
+- **Assignee:** developer
+- **Goal:** remove the duplicated first-segment grouping of Zod issues (architect finding F1, step 5).
+- **Requirements:** PH-FR-08, PH-FR-20.
+- **Read first:** `specs/002-platform-hardening/acceptance/step5-architect.md` (F1), `src/lib/errors.ts`, `src/lib/action.ts`, `src/lib/list-params.ts`, ADR 0015.
+- **Do:** export `fieldErrorsFromZod(error: z.ZodError): FieldErrors` from `src/lib/errors.ts` (type-only `zod` import, so the module stays client-safe) with the same behavior as the two private copies (group by first path segment, form-level issues under `_form`); use it in `action.ts` and `list-params.ts` and delete both private copies.
+- **Acceptance:** existing unit tests pass unchanged; lint, typecheck, format:check pass.
+- **Out of scope:** behavior changes; typed filters (T-66).
+- **Output:** the three files. Commit scope `refactor(lib)`.
+- **Dependencies:** PH-T-51.
+
+### PH-T-66 Typed filter values in `listParams`
+- **Assignee:** developer
+- **Goal:** a wrongly typed filter value from the URL returns `validation` before any query (architect finding F3; Product Owner delegated, decision recorded in the spec change log).
+- **Requirements:** PH-FR-20, PH-AC-40.
+- **Read first:** `specs/002-platform-hardening/acceptance/step5-architect.md` (Q1, F3), ADR 0016 "Known limits", `src/lib/list-params.ts`.
+- **Do:** let `filters` in `listParams({...})` be either a `readonly string[]` (today's behavior, untyped strings) or a record of field name to Zod string schema (for example `z.uuid()`, `z.enum([...])`); a value that fails its schema returns `validation` with the field under `fieldErrors` and no query runs; keep the strict-object rules (unknown keys, reserved names, repeated keys, empty values). Update ADR 0016 "Known limits" accordingly (typed filters available; text columns need no schema).
+- **Acceptance:** the old array form behaves as before; a non-uuid on a `z.uuid()` filter returns `validation`; lint, typecheck, format:check, unit tests pass.
+- **Out of scope:** filter operators beyond equality; mapping 22P02 globally (rejected in ADR 0016).
+- **Output:** `src/lib/list-params.ts`, ADR 0016. Commit scope `feat(lib)`.
+- **Dependencies:** PH-T-65.
+
+### PH-T-67 Tests: typed filters and test rename
+- **Assignee:** tester
+- **Goal:** tests for typed filters; fix a misleading test title (architect findings F3 and F2).
+- **Requirements:** PH-FR-20, 21, PH-AC-40.
+- **Read first:** `src/lib/list-params.ts` (typed filters), `src/lib/list-params.test.ts`, `tests/db/paginate.test.ts`, step5-architect.md (F2, F3).
+- **Do:** unit tests: record-form filters accept valid values and reject wrong ones (`z.uuid()`, `z.enum`), the array form is unchanged, a failing typed filter reports `validation` with the field under `fieldErrors`, and the fake `tx` is never called; in `tests/db/paginate.test.ts` rename the case "the page and count queries see one consistent snapshot in the same transaction" to say it documents READ COMMITTED behavior (a concurrent insert appears in the second call), consistent with ADR 0016.
+- **Acceptance:** `pnpm test` and `pnpm test:db` pass (db twice in a row); lint, typecheck, format:check pass.
+- **Out of scope:** production code changes.
+- **Output:** the two test files. Commit scope `test(lib)`.
+- **Dependencies:** PH-T-66.
 
 ### PH-T-29 E2E: telemetry with receiver and closed port
 - **Assignee:** tester
@@ -871,3 +907,4 @@ Every PH-FR and PH-NFR appears at least once as a build task and once as a verif
 | 2026-11-13 | Added PH-T-64 (relaxed PH-AC-23: Next.js 16 does not exit on an invalid OTEL_* value). Total 64 tasks. |
 | 2026-11-13 | Spike PH-T-33 decisions applied (status table: PH-T-33 done; other statuses unchanged; no tasks added). T-34: `/design/frames/*` `frame-ancestors 'self'` variant, root layout `connection()`, `z.config({ jitless: true })` module imported first in client form files, `global-error` needs no fallback, `/api/*` no-CSP limit. T-35: `experimental.serverActions.bodySizeLimit`, `X-Frame-Options` `SAMEORIGIN` for `/design/frames/:path*` and `DENY` elsewhere. T-36/T-37: new PH-AC-79 and `experimental` config key. T-38: PH-AC-30 relaxed (non-2xx, 413 in the log). T-39 and T-56: record outcomes and the jitless convention in `docs/architecture.md`. Traceability rows updated. |
 | 2026-11-13 | PH-T-44 closed without a separate agent: its tests (trigger, allowlist, guard-of-the-guard) were delivered by PH-T-43; the remaining PH-AC-36 check (`pnpm db:reset`, `pnpm db:schema`, empty `git diff src/db`, `pnpm test:db` 265 passed) was run by the orchestrator. |
+| 2026-11-13 | Added PH-T-65, PH-T-66, PH-T-67 from the step 5 architect review (shared `fieldErrorsFromZod`, typed filter values in `listParams`, tests and a test rename); PH-T-52 now depends on them. Total 67 tasks. |
