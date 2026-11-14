@@ -138,6 +138,17 @@ These are convention (C4) violations as much as lint gaps, and none is reachable
 - `tests/` gets only the baseline (a), (f) and `import/no-cycle`: it may import `@/db` and `@/db/client`, use `sql.raw` and read `process.env`.
 - Colocated unit tests under `src/**` follow the rules of their folder (for example `src/db/rls.test.ts` may import `./client`; `src/app/api/health/db/route.test.ts` uses `vi.mock("@/db")`, a string, not an import).
 
+## Reversibility (epic 002)
+Each platform choice of epic 002 can be relaxed in one place (PH-NFR-06):
+
+| Choice | Where to relax | Record |
+|--------|----------------|--------|
+| Nonce CSP, every page dynamic (C3) | Replace `src/proxy.ts` with a static CSP in `next.config.ts` `headers()` (weaker, no nonce; allows static rendering); delete the `connection()` call in the root layout | ADR 0014, "Fallback" |
+| Local collector | Delete `docker/observability/` and the two `obs:*` scripts; nothing else references it | ADR 0013, README |
+| Telemetry | Off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set; removing `src/instrumentation.node.ts` and its import in `register()` removes the SDK | ADR 0013 |
+| Database conventions | One entry per table and rule in `CONVENTION_ALLOWLIST` (`tests/utils/schema-guard.ts`) with a reason; a rule is removed by deleting it from `findConventionViolations` | ADR 0012 |
+| Fault routes and `assertFaultInjection()` (C4) | Remove `src/app/design/errors/`, `src/lib/fault-injection.ts` and its call in the root layout; PH-AC-03 then becomes component-level | ADR 0015, spec PH-FR-23 |
+
 ## Design system
 Tokens, components and rules are in [design-system.md](design-system.md). Architecture-relevant points:
 - `src/app/globals.css` is the one token file. Theming uses CSS `light-dark()` with `color-scheme: light dark` instead of shadcn's `.dark` class; changing the mechanism edits that one file because components consume semantic tokens only. It is explained in design-system section 2.1 and recorded in [ADR 0007](adr/0007-theming-mechanism-and-browser-floor.md); the UI stack is in [ADR 0006](adr/0006-ui-stack-and-design-system-boundary.md).

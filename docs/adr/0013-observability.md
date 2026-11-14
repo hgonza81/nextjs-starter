@@ -26,7 +26,7 @@ Until now the only observability is one `console.error` call site (convention C8
 
 ## Consequences
 - Positive: zero cost and zero failure modes when no endpoint is set; a cloud backend (Grafana Cloud, Sentry via OTLP) is `OTEL_*` variables only; logs and traces correlate.
-- Negative: about 9 new exact-pinned dependencies (subject to the 24-hour release-age gate of ADR 0010); the own logger must be kept small.
+- Negative: one new direct runtime dependency (`@opentelemetry/sdk-node`, exact-pinned, with a large transitive tree, subject to the 24-hour release-age gate of ADR 0010) plus one devDependency for the test helper (the first estimate of about 9 was reduced by the SDK-driven configuration, see "Implementation notes"); the own logger must be kept small.
 - Updates convention C8 (the "no observability tooling" sentence is removed).
 - **Spikes (first tasks):** `sdk-node` bundling and versions under Turbopack and Node 26 (may need `serverExternalPackages`); that a throwaway OTLP receiver gets a trace; `onRequestError` does not fire for `redirect()` and `notFound()`.
 - **Peer range (settled by the PH-T-23 spike, see "Spike outcome"):** the recommendation written here before the spike (pin `@opentelemetry/api` to 1.9.x) was based on the wrong assumption and is superseded: the current SDK line requires api 1.10. `@opentelemetry/api` stays at 1.10.0 and the test helper's `@opentelemetry/sdk-trace-base` 2.12.1 is replaced by `@opentelemetry/sdk-trace` 3.1.1.
