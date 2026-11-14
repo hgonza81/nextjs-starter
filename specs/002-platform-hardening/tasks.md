@@ -85,7 +85,7 @@
 | PH-T-65 | Fix: one shared `fieldErrorsFromZod` helper (architect F1) | developer | 5 | T-51 | done |
 | PH-T-66 | Typed filter values in `listParams` (architect F3, Q1 option b) | developer | 5 | T-65 | done |
 | PH-T-67 | Tests: typed filters and test rename (architect F2, F3) | tester | 5 | T-66 | done |
-| PH-T-68 | Fix: `gen:module` header comment lists folders that differ from C1 | developer | 6 | T-56 | todo |
+| PH-T-68 | Fix: `gen:module` header comment lists folders that differ from C1 | developer | 6 | T-56 | done |
 
 Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-ux-designer 1. Total 62.
 
