@@ -55,7 +55,7 @@
 | PH-T-35 | Static headers and config hardening | developer | 3 | T-33 (Independent of T-34) | done |
 | PH-T-36 | Tests: CSP policy and config (unit) | tester | 3 | T-34, T-35 | done |
 | PH-T-37 | E2E: CSP, headers, nonce; global violation fixture | tester | 3 | T-36 | done |
-| PH-T-38 | E2E: Server Action origin and body size | tester | 3 | T-37 | todo |
+| PH-T-38 | E2E: Server Action origin and body size | tester | 3 | T-37 | done |
 | PH-T-39 | Architect check of step 3 and ADR 0014 confirmation | architect | 3 | T-37, T-38 | todo |
 | PH-T-40 | Accept step 3 | product-manager | 3 | T-39 | todo |
 | PH-T-41 | Spike: trigger clock and `set_updated_at` under the default-privilege revoke | developer | 4 | T-40 | todo |
