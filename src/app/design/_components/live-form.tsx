@@ -1,5 +1,8 @@
 "use client";
 
+// Must stay first: turns Zod JIT off before any schema is created (ADR 0014).
+import "@/lib/zod-jitless";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
