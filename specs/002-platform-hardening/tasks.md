@@ -75,7 +75,7 @@
 | PH-T-55 | CI smoke step for `gen:module` | developer | 6 | T-54 | done |
 | PH-T-56 | `docs/architecture.md` and ADR index confirmation | architect | 6 | T-55 | done |
 | PH-T-57 | README: collector commands and new scripts | developer | 6 | T-55 (Independent of T-56) | done |
-| PH-T-58 | Test README: seams, harness, ports | tester | 6 | T-55 (Independent of T-56, T-57) | todo |
+| PH-T-58 | Test README: seams, harness, ports | tester | 6 | T-55 (Independent of T-56, T-57) | done |
 | PH-T-59 | Full gates and CI parity | tester | 6 | T-56, T-57, T-58, T-68 | todo |
 | PH-T-60 | Final architect read | architect | 6 | T-59 | todo |
 | PH-T-61 | Final tester read | tester | 6 | T-59 (Independent of T-60) | todo |
@@ -814,7 +814,7 @@ Count by assignee: developer 26, tester 22, architect 7, product-manager 6, ui-u
 - **Do:** document fault routes and `assertFaultInjection()` with the `x-fault` header, `scripts/e2e-server.mts`, log tee location, ports (+0 to +3, receiver +10), the CSP-violation fixture, the per-AC levels table, and the manual checks.
 - **Acceptance:** a new developer can run one E2E file and read its server log from the README alone.
 - **Out of scope:** code changes.
-- **Output:** `tests/utils/README.md`. Commit scope `docs(tests)`.
+- **Output:** `tests/README.md` (the `tests/utils/README.md` file is a pointer to it). Commit scope `docs(tests)`.
 - **Dependencies:** PH-T-55.
 
 ### PH-T-59 Full gates and CI parity
