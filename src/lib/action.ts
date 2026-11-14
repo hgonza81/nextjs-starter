@@ -7,8 +7,8 @@ import { fromDbError } from "@/lib/db-error";
 import {
   AppError,
   type ActionError,
-  type FieldErrors,
   type Result,
+  fieldErrorsFromZod,
 } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
@@ -40,16 +40,6 @@ const REF_LENGTH = 8;
 const newRef = (): string =>
   crypto.randomUUID().replaceAll("-", "").slice(0, REF_LENGTH);
 
-/** Groups issue messages by top-level field; form-level issues use "_form". */
-const collectFieldErrors = (error: z.ZodError): FieldErrors => {
-  const collected: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const field = String(issue.path[0] ?? "_form");
-    (collected[field] ??= []).push(issue.message);
-  }
-  return collected;
-};
-
 const failure = (error: ActionError): Result<never> => ({ ok: false, error });
 
 const toActionError = (error: AppError): ActionError => ({
@@ -75,7 +65,7 @@ export function defineAction<Schema extends z.ZodType, Output>(
   return async (input) => {
     const parsed = schema.safeParse(input);
     if (!parsed.success) {
-      const fieldErrors = collectFieldErrors(parsed.error);
+      const fieldErrors = fieldErrorsFromZod(parsed.error);
       return failure({
         type: "validation",
         message: INVALID_INPUT_MESSAGE,

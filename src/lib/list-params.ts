@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { validationError, type FieldErrors } from "@/lib/errors";
+import { fieldErrorsFromZod, validationError } from "@/lib/errors";
 
 /**
  * List parameters (PH-FR-20, D12, ADR 0016): parses URL search params into
@@ -139,16 +139,6 @@ export function listParams<Sortable extends string, Filter extends string>(
     });
 }
 
-/** Groups issues by first path segment; form-level (unknown key) is `_form`. */
-const collectFieldErrors = (error: z.ZodError): FieldErrors => {
-  const collected: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const field = String(issue.path[0] ?? "_form");
-    (collected[field] ??= []).push(issue.message);
-  }
-  return collected;
-};
-
 /**
  * Parses `input` with a schema from `listParams`, for callers outside
  * `defineAction` (for example a page reading `searchParams`).
@@ -164,7 +154,7 @@ export function parseListParams<Output>(
   if (!parsed.success) {
     throw validationError(
       INVALID_LIST_PARAMS_MESSAGE,
-      collectFieldErrors(parsed.error),
+      fieldErrorsFromZod(parsed.error),
     );
   }
   return parsed.data;

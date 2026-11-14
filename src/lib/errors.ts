@@ -3,6 +3,8 @@
  * `server-only`, so client components can import the wire types.
  */
 
+import type { z } from "zod";
+
 /** Exactly five error types; add one only through an ADR change. */
 export type AppErrorType =
   "validation" | "not_found" | "forbidden" | "conflict" | "unexpected";
@@ -67,4 +69,17 @@ export function forbiddenError(message: string): AppError {
 
 export function conflictError(message: string): AppError {
   return new AppError("conflict", message);
+}
+
+/**
+ * Groups Zod issue messages by first path segment; form-level issues (empty
+ * path, such as an unknown key) go under the reserved key `_form` (ADR 0015).
+ */
+export function fieldErrorsFromZod(error: z.ZodError): FieldErrors {
+  const collected: Record<string, string[]> = {};
+  for (const issue of error.issues) {
+    const field = String(issue.path[0] ?? "_form");
+    (collected[field] ??= []).push(issue.message);
+  }
+  return collected;
 }
