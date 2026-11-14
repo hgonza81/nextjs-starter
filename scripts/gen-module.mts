@@ -23,7 +23,7 @@ const INDEX_CONTENT = `/**
  * file (\`@/modules/<name>\`), never its internals (ADR 0001 rule 1).
  * Export only what other modules need.
  *
- * Folders (actions, schemas, services, data, components) are added when they
+ * Folders (actions, queries, schemas, components) are added when they
  * have content, not before (architecture C1).
  */
 export {};
