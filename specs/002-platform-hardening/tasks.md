@@ -69,7 +69,7 @@
 | PH-T-49 | Tests: `listParams` | tester | 5 | T-47 (Independent of T-48) | done |
 | PH-T-50 | Tests: `paginate` | tester | 5 | T-48 | done |
 | PH-T-51 | Architect check of step 5 and ADR 0016 confirmation | architect | 5 | T-49, T-50 | done |
-| PH-T-52 | Accept step 5 | product-manager | 5 | T-51, T-65, T-66, T-67 | todo |
+| PH-T-52 | Accept step 5 | product-manager | 5 | T-51, T-65, T-66, T-67 | done |
 | PH-T-53 | `gen:module` script | developer | 6 | T-52 | todo |
 | PH-T-54 | Tests: `gen:module` | tester | 6 | T-53 | todo |
 | PH-T-55 | CI smoke step for `gen:module` | developer | 6 | T-54 | todo |
