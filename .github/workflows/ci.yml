@@ -50,6 +50,13 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test
       - run: pnpm build
+      # PH-FR-22: the generator output must pass lint and typecheck. Runs last
+      # so the generated folder never reaches build or tests. The trap removes
+      # it (and src/modules if the generator created it empty) also on failure.
+      - name: Generator smoke test (gen:module)
+        run: |
+          trap 'rm -rf src/modules/ci-smoke; rmdir --ignore-fail-on-non-empty src/modules 2>/dev/null || true' EXIT
+          pnpm gen:module ci-smoke && pnpm lint && pnpm typecheck
 
   # FND-FR-24: secret scan over the full history. BLOCKING. Uses the Gitleaks
   # binary (the gitleaks-action needs a license for organization accounts).
