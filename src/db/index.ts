@@ -9,3 +9,4 @@ export {
   type RlsTransaction,
   type VerifiedContext,
 } from "./rls";
+export { paginate, type Page, type PaginateOptions } from "./paginate";
