@@ -60,7 +60,7 @@
 | PH-T-40 | Accept step 3 | product-manager | 3 | T-39 | done |
 | PH-T-41 | Spike: trigger clock and `set_updated_at` under the default-privilege revoke | developer | 4 | T-40 | done |
 | PH-T-42 | Migration: `public.set_updated_at()` | developer | 4 | T-41 | done |
-| PH-T-43 | Convention guard rules in the schema guard | tester | 4 | T-42 | todo |
+| PH-T-43 | Convention guard rules in the schema guard | tester | 4 | T-42 | done |
 | PH-T-44 | Tests: trigger, guard allowlist, guard-of-the-guard | tester | 4 | T-43 | todo |
 | PH-T-45 | Architect check of step 4 and ADR 0012 confirmation | architect | 4 | T-44 | todo |
 | PH-T-46 | Accept step 4 | product-manager | 4 | T-45 | todo |
