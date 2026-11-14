@@ -82,7 +82,7 @@
 | PH-T-62 | Final acceptance | product-manager | 6 | T-60, T-61 | todo |
 | PH-T-63 | Fix: `request_id` missing on route-handler failures logged by the hook | developer | 1 | T-20 | done |
 | PH-T-64 | Adjust the bad-variable startup test to the relaxed PH-AC-23 | tester | 2 | T-28 | done |
-| PH-T-65 | Fix: one shared `fieldErrorsFromZod` helper (architect F1) | developer | 5 | T-51 | todo |
+| PH-T-65 | Fix: one shared `fieldErrorsFromZod` helper (architect F1) | developer | 5 | T-51 | done |
 | PH-T-66 | Typed filter values in `listParams` (architect F3, Q1 option b) | developer | 5 | T-65 | todo |
 | PH-T-67 | Tests: typed filters and test rename (architect F2, F3) | tester | 5 | T-66 | todo |
 
